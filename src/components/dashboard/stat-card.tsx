@@ -20,7 +20,7 @@ export function StatCard({ title, value, icon: Icon, description, color }: StatC
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-xl font-bold sm:text-2xl">{value}</div>
         <p className="text-xs text-muted-foreground">{description}</p>
       </CardContent>
     </Card>

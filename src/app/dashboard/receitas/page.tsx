@@ -249,12 +249,12 @@ export default function ReceitasPage() {
          ) : filteredIncomes.length > 0 ? (
            filteredIncomes.map((income) => (
             <Card key={income.id} className="w-full">
-                <CardHeader className="p-4">
-                    <div className="flex items-start justify-between">
+                <CardHeader className="p-3">
+                    <div className="flex items-start justify-between gap-4">
                         <CardTitle className='text-base capitalize leading-none'>{income.tipo}</CardTitle>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
                                     <span className="sr-only">Abrir menu</span>
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
@@ -277,8 +277,8 @@ export default function ReceitasPage() {
                         </DropdownMenu>
                     </div>
                 </CardHeader>
-                <CardContent className="flex items-end justify-between text-sm p-4 pt-0">
-                    <div className="space-y-1">
+                <CardContent className="flex items-end justify-between text-sm p-3 pt-0">
+                    <div className="space-y-1.5">
                         <div className='flex items-center gap-2'>
                           <Badge variant={income.status === 'pago' ? 'success' : 'destructive'} className='capitalize'>
                             {income.status}
@@ -290,7 +290,7 @@ export default function ReceitasPage() {
                           )}
                         </div>
                     </div>
-                    <p className="font-semibold text-base">{formatCurrency(income.valor)}</p>
+                    <p className="font-semibold text-base text-right">{formatCurrency(income.valor)}</p>
                 </CardContent>
             </Card>
            ))

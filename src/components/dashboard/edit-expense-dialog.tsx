@@ -47,7 +47,7 @@ const expenseSchema = z.object({
   recorrente: z.boolean().default(false),
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
   status: z.enum(['pago', 'pendente']).default('pendente'),
-  dataPagamento: z.coerce.date().optional(),
+  dataPagamento: z.coerce.date().optional().nullable(),
 });
 
 const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Outros'];
@@ -74,10 +74,10 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
         ...expense,
         dataPagamento: expense.dataPagamento && typeof expense.dataPagamento.toDate === 'function' 
             ? expense.dataPagamento.toDate() 
-            : undefined,
+            : null,
       });
     }
-  }, [expense, open]);
+  }, [expense, form, open]);
 
   const status = form.watch('status');
   useEffect(() => {
@@ -86,7 +86,7 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
               form.setValue('dataPagamento', new Date());
           }
       } else {
-          form.setValue('dataPagamento', undefined);
+          form.setValue('dataPagamento', null);
       }
   }, [status, form]);
 

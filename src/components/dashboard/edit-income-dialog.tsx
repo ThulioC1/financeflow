@@ -45,7 +45,7 @@ const incomeSchema = z.object({
     valor: z.coerce.number().positive({ message: 'Valor deve ser positivo.' }),
     mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
     status: z.enum(['pago', 'pendente']).default('pendente'),
-    dataRecebimento: z.coerce.date().optional(),
+    dataRecebimento: z.coerce.date().optional().nullable(),
 });
 
 interface EditIncomeDialogProps {
@@ -70,10 +70,10 @@ export function EditIncomeDialog({ income, open, onOpenChange }: EditIncomeDialo
         ...income,
         dataRecebimento: income.dataRecebimento && typeof income.dataRecebimento.toDate === 'function' 
             ? income.dataRecebimento.toDate() 
-            : undefined,
+            : null,
       });
     }
-  }, [income, open]);
+  }, [income, form, open]);
 
   const status = form.watch('status');
   useEffect(() => {
@@ -82,7 +82,7 @@ export function EditIncomeDialog({ income, open, onOpenChange }: EditIncomeDialo
               form.setValue('dataRecebimento', new Date());
           }
       } else {
-          form.setValue('dataRecebimento', undefined);
+          form.setValue('dataRecebimento', null);
       }
   }, [status, form]);
 

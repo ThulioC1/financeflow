@@ -43,7 +43,7 @@ const incomeSchema = z.object({
   valor: z.coerce.number().positive({ message: 'Valor deve ser positivo.' }),
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
   status: z.enum(['pago', 'pendente']).default('pendente'),
-  dataRecebimento: z.coerce.date().optional(),
+  dataRecebimento: z.coerce.date().optional().nullable(),
 });
 
 export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
@@ -59,6 +59,7 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
       valor: 0,
       mesReferencia: new Date().toISOString().slice(0, 7),
       status: 'pendente',
+      dataRecebimento: null,
     },
   });
 
@@ -69,7 +70,7 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
         form.setValue('dataRecebimento', new Date());
       }
     } else {
-      form.setValue('dataRecebimento', undefined);
+      form.setValue('dataRecebimento', null);
     }
   }, [status, form]);
 
@@ -87,7 +88,7 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
         id: newId,
         userId: user.uid,
         createdAt: serverTimestamp(),
-        dataRecebimento: values.dataRecebimento ? Timestamp.fromDate(values.dataRecebimento) : undefined,
+        dataRecebimento: values.dataRecebimento ? Timestamp.fromDate(values.dataRecebimento) : null,
       };
       
       const incomeDocRef = doc(db, 'users', user.uid, 'incomes', newId);
@@ -110,7 +111,13 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
         if (!isOpen) {
-            form.reset();
+            form.reset({
+              valor: 0,
+              mesReferencia: new Date().toISOString().slice(0, 7),
+              status: 'pendente',
+              dataRecebimento: null,
+              tipo: undefined,
+            });
         }
         setOpen(isOpen);
     }}>
@@ -130,7 +137,7 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Tipo</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Selecione o tipo" />

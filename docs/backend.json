@@ -1,0 +1,280 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the FinanceFlow application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user.",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "createdAt"
+      ]
+    },
+    "Income": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Income",
+      "type": "object",
+      "description": "Represents an income entry for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the income entry.",
+          "format": "uuid"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this income. (Relationship: User 1:N Income)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the income."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of income (e.g., quinzena 1, quinzena 2, extra)."
+        },
+        "referenceMonth": {
+          "type": "string",
+          "description": "The month to which the income refers (YYYY-MM)."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the income (e.g., pending, paid)."
+        },
+        "receivedDate": {
+          "type": "string",
+          "description": "The date when the income was received.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the income entry was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "amount",
+        "type",
+        "referenceMonth",
+        "status",
+        "receivedDate",
+        "createdAt"
+      ]
+    },
+    "Expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "description": "Represents an expense entry for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the expense entry.",
+          "format": "uuid"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this expense. (Relationship: User 1:N Expense)"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the expense."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the expense."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the expense."
+        },
+        "recurring": {
+          "type": "boolean",
+          "description": "Indicates whether the expense is recurring."
+        },
+        "referenceMonth": {
+          "type": "string",
+          "description": "The month to which the expense refers (YYYY-MM)."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the expense (e.g., paid, pending)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the expense entry was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "description",
+        "amount",
+        "category",
+        "recurring",
+        "referenceMonth",
+        "status",
+        "createdAt"
+      ]
+    },
+    "Balance": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Balance",
+      "type": "object",
+      "description": "Represents the balance for a user for a specific month.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the balance entry.",
+          "format": "uuid"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this balance. (Relationship: User 1:N Balance)"
+        },
+        "referenceMonth": {
+          "type": "string",
+          "description": "The month to which the balance refers (YYYY-MM)."
+        },
+        "initialBalance": {
+          "type": "number",
+          "description": "The initial balance for the month."
+        },
+        "totalIncome": {
+          "type": "number",
+          "description": "The total income for the month."
+        },
+        "totalExpenses": {
+          "type": "number",
+          "description": "The total expenses for the month."
+        },
+        "finalBalance": {
+          "type": "number",
+          "description": "The final balance for the month."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "referenceMonth",
+        "initialBalance",
+        "totalIncome",
+        "totalExpenses",
+        "finalBalance"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information. Path-based ownership ensures only the user can access their profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/incomes/{incomeId}",
+        "definition": {
+          "entityName": "Income",
+          "schema": {
+            "$ref": "#/backend/entities/Income"
+          },
+          "description": "Stores income entries for a specific user. Path-based ownership ensures only the user can access their income data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "incomeId",
+              "description": "The unique identifier of the income entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/expenses/{expenseId}",
+        "definition": {
+          "entityName": "Expense",
+          "schema": {
+            "$ref": "#/backend/entities/Expense"
+          },
+          "description": "Stores expense entries for a specific user. Path-based ownership ensures only the user can access their expense data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "expenseId",
+              "description": "The unique identifier of the expense entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/balances/{balanceId}",
+        "definition": {
+          "entityName": "Balance",
+          "schema": {
+            "$ref": "#/backend/entities/Balance"
+          },
+          "description": "Stores balance information for a specific user. Path-based ownership ensures only the user can access their balance data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "balanceId",
+              "description": "The unique identifier of the balance entry."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure data isolation between users and efficient querying of financial data. Each user's data (incomes, expenses, and balances) is stored under their respective user ID, enabling secure and straightforward security rules. The path-based ownership pattern (`/users/{userId}/incomes/{incomeId}`, `/users/{userId}/expenses/{expenseId}`, `/users/{userId}/balances/{balanceId}`) guarantees that users can only access their own data, adhering to the application's security requirements.\n\n**Authorization Independence:**\n\n*   The structure inherently achieves Authorization Independence. Each document (income, expense, balance) is stored within a path specific to a user (`/users/{userId}`). This eliminates the need for `get()` calls in security rules to validate ownership. The security rules can directly verify `request.auth.uid == userId` to grant access, making the authorization process atomic and independent of other documents.\n\n**QAPs Support:**\n\n*   The structure supports secure `list` operations because each user's data is segregated into its own subcollection. Security rules can allow listing operations based on the `userId` in the path, preventing unauthorized access to other users' data.\n*   The segregation of data into separate collections (`incomes`, `expenses`, `balances`) also simplifies security rules by ensuring that all documents within a collection share the same security requirements. This avoids the need for complex rule logic based on document content.\n\nThis design promotes clarity, security, and scalability, aligning with the application's requirements for a personal finance management system."
+  }
+}

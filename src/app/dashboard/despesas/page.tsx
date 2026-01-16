@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,6 +11,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import type { Expense } from "@/lib/types";
 import {
@@ -22,9 +40,10 @@ import {
 } from "@/components/ui/select";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { AddExpenseDialog } from "@/components/dashboard/add-expense-dialog";
+import { EditExpenseDialog } from "@/components/dashboard/edit-expense-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const formatCurrency = (value: number) => {
@@ -40,6 +59,9 @@ const formatMonth = (month: string) => {
 
 export default function DespesasPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
+
 
   const db = useFirestore();
   const { user } = useUser();
@@ -66,17 +88,42 @@ export default function DespesasPage() {
     return allExpenses.filter(expense => expense.mesReferencia === selectedMonth);
   }, [allExpenses, selectedMonth]);
 
-  const handleMarkAsPaid = (expenseId: string) => {
-    if (!user) return;
-    const expenseRef = doc(db, 'users', user.uid, 'expenses', expenseId);
-    updateDocumentNonBlocking(expenseRef, { status: 'pago' });
+  const handleDeleteConfirm = () => {
+    if (!user || !deletingExpenseId) return;
+    const expenseRef = doc(db, 'users', user.uid, 'expenses', deletingExpenseId);
+    deleteDocumentNonBlocking(expenseRef);
     toast({
-        title: 'Despesa atualizada!',
-        description: 'A despesa foi marcada como paga.'
+        title: 'Despesa excluída!',
+        description: 'Sua despesa foi removida com sucesso.'
     });
+    setDeletingExpenseId(null);
   };
 
   return (
+    <>
+    <EditExpenseDialog
+        expense={editingExpense}
+        open={!!editingExpense}
+        onOpenChange={(open) => !open && setEditingExpense(null)}
+    />
+    <AlertDialog
+        open={!!deletingExpenseId}
+        onOpenChange={(open) => !open && setDeletingExpenseId(null)}
+    >
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Essa ação não pode ser desfeita. Isso excluirá permanentemente a despesa.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteConfirm}>Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
     <div className="space-y-6">
        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -113,7 +160,7 @@ export default function DespesasPage() {
                     <TableHead>Categoria</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="w-[80px] text-right">Ações</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -124,7 +171,7 @@ export default function DespesasPage() {
                             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                             <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                             <TableCell className="text-right"><Skeleton className="h-8 w-32 ml-auto" /></TableCell>
+                             <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                         </TableRow>
                     ))
                 ) : filteredExpenses.length > 0 ? (
@@ -141,9 +188,29 @@ export default function DespesasPage() {
                                 </Badge>
                             </TableCell>
                              <TableCell className="text-right">
-                                 {expense.status === 'pendente' && (
-                                    <Button variant="outline" size="sm" onClick={() => handleMarkAsPaid(expense.id)}>Marcar como pago</Button>
-                                 )}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Abrir menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => setEditingExpense(expense)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Editar
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            className="text-red-600 focus:text-red-500 focus:bg-red-50"
+                                            onClick={() => setDeletingExpenseId(expense.id)}
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Excluir
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                     ))
@@ -158,5 +225,6 @@ export default function DespesasPage() {
         </Table>
       </div>
     </div>
+    </>
   );
 }

@@ -1,0 +1,49 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Wallet,
+  Landmark,
+  History,
+  TrendingUp,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from '@/components/ui/sidebar';
+
+const links = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/receitas', label: 'Receitas', icon: Wallet },
+  { href: '/dashboard/despesas', label: 'Despesas', icon: Landmark },
+  { href: '/dashboard/historico', label: 'Histórico', icon: History },
+];
+
+export function MainNav() {
+  const pathname = usePathname();
+
+  return (
+    <SidebarMenu className="p-2">
+      {links.map((link) => {
+        const isActive = pathname === link.href;
+        return (
+          <SidebarMenuItem key={link.href}>
+            <Link href={link.href} passHref legacyBehavior>
+              <SidebarMenuButton
+                isActive={isActive}
+                tooltip={link.label}
+              >
+                <link.icon className="h-4 w-4" />
+                <span>{link.label}</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
+  );
+}

@@ -81,16 +81,67 @@ export default function DespesasPage() {
 
   const availableMonths = useMemo(() => {
     if (!allExpenses) return [selectedMonth];
-    const months = [...new Set(allExpenses.map(e => e.mesReferencia))];
-    if (!months.includes(selectedMonth)) {
-        months.push(selectedMonth);
-    }
-    return months.sort().reverse();
-  }, [allExpenses, selectedMonth]);
+    const months = new Set(allExpenses.map(e => e.mesReferencia.slice(0, 7)));
 
-  const filteredExpenses = useMemo(() => {
+    // Add current month if not present
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    if (!months.has(currentMonth)) {
+      months.add(currentMonth);
+    }
+
+    // add next 12 months for future planning
+    let [year, month] = currentMonth.split('-').map(Number);
+    for (let i = 0; i < 12; i++) {
+        month++;
+        if (month > 12) {
+            month = 1;
+            year++;
+        }
+        months.add(`${year}-${String(month).padStart(2, '0')}`);
+    }
+
+    return Array.from(months).sort().reverse();
+  }, [allExpenses]);
+
+  const filteredAndRecurringExpenses = useMemo(() => {
     if (!allExpenses) return [];
-    return allExpenses.filter(expense => expense.mesReferencia === selectedMonth);
+
+    const expensesForSelectedMonth = allExpenses.filter(e => e.mesReferencia === selectedMonth);
+
+    // Group all expenses by description to find recurring ones
+    const recurringTemplates = new Map<string, Expense>();
+    allExpenses.forEach(expense => {
+        if (expense.recorrente) {
+            // Keep the earliest occurrence as the template
+            const existing = recurringTemplates.get(expense.descricao);
+            if (!existing || new Date(expense.mesReferencia) < new Date(existing.mesReferencia)) {
+                recurringTemplates.set(expense.descricao, expense);
+            }
+        }
+    });
+    
+    const projectedExpenses: Expense[] = [];
+    recurringTemplates.forEach(template => {
+        const templateDate = new Date(template.mesReferencia + '-02');
+        const selectedDate = new Date(selectedMonth + '-02');
+
+        const expenseExistsForMonth = expensesForSelectedMonth.some(
+            e => e.descricao === template.descricao
+        );
+
+        if (templateDate <= selectedDate && !expenseExistsForMonth) {
+            projectedExpenses.push({
+                ...template,
+                id: `${template.id}-${selectedMonth}`, // synthetic ID for react key
+                mesReferencia: selectedMonth,
+                status: 'pendente',
+                dataPagamento: undefined,
+                isProjected: true, // Flag to identify projected expenses
+            });
+        }
+    });
+
+    return [...expensesForSelectedMonth, ...projectedExpenses];
   }, [allExpenses, selectedMonth]);
 
   const handleDeleteConfirm = () => {
@@ -182,9 +233,9 @@ export default function DespesasPage() {
                              <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                         </TableRow>
                     ))
-                ) : filteredExpenses.length > 0 ? (
-                    filteredExpenses.map((expense) => (
-                        <TableRow key={expense.id}>
+                ) : filteredAndRecurringExpenses.length > 0 ? (
+                    filteredAndRecurringExpenses.map((expense) => (
+                        <TableRow key={expense.id} className={expense.isProjected ? "opacity-50" : ""}>
                             <TableCell className="font-medium">{expense.descricao}</TableCell>
                             <TableCell>
                                 <Badge variant="outline">{expense.categoria}</Badge>
@@ -198,8 +249,8 @@ export default function DespesasPage() {
                             <TableCell className="text-right">{formatCurrency(expense.valor)}</TableCell>
                              <TableCell className="text-right">
                                 <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <DropdownMenuTrigger asChild disabled={expense.isProjected}>
+                                        <Button variant="ghost" className="h-8 w-8 p-0" disabled={expense.isProjected}>
                                             <span className="sr-only">Abrir menu</span>
                                             <MoreHorizontal className="h-4 w-4" />
                                         </Button>

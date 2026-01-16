@@ -32,11 +32,13 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, Timestamp } from 'firebase/firestore';
+import { doc, Timestamp, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Expense } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 const expenseSchema = z.object({
   descricao: z.string().min(2, { message: 'Descrição deve ter pelo menos 2 caracteres.' }),
@@ -70,10 +72,12 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
     if (expense) {
       form.reset({
         ...expense,
-        dataPagamento: expense.dataPagamento ? expense.dataPagamento.toDate() : undefined,
+        dataPagamento: expense.dataPagamento && typeof expense.dataPagamento.toDate === 'function' 
+            ? expense.dataPagamento.toDate() 
+            : undefined,
       });
     }
-  }, [expense, form, open]);
+  }, [expense, open]);
 
   const status = form.watch('status');
   useEffect(() => {
@@ -94,27 +98,32 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
     }
     setLoading(true);
 
-    try {
-      const expenseDocRef = doc(db, 'users', user.uid, 'expenses', expense.id);
-      const dataToUpdate = {
-        ...values,
-        dataPagamento: values.dataPagamento ? Timestamp.fromDate(values.dataPagamento) : null,
-      };
-      // Type assertion because updateDoc doesn't like `undefined` but it works to delete a field.
-      // Firestore will remove the field if the value is undefined. `null` is also an option.
-      updateDocumentNonBlocking(expenseDocRef, dataToUpdate as any);
+    const expenseDocRef = doc(db, 'users', user.uid, 'expenses', expense.id);
+    const dataToUpdate = {
+      ...values,
+      dataPagamento: values.dataPagamento ? Timestamp.fromDate(values.dataPagamento) : null,
+    };
 
-      toast({
-        title: 'Sucesso!',
-        description: 'Despesa atualizada.',
+    updateDoc(expenseDocRef, dataToUpdate as any)
+      .then(() => {
+        toast({
+          title: 'Sucesso!',
+          description: 'Despesa atualizada.',
+        });
+        onOpenChange(false);
+      })
+      .catch((serverError) => {
+        console.error("Error updating expense: ", serverError);
+        toast({ title: 'Erro', description: 'Não foi possível atualizar a despesa.', variant: 'destructive' });
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: expenseDocRef.path,
+          operation: 'update',
+          requestResourceData: dataToUpdate
+        }));
+      })
+      .finally(() => {
+        setLoading(false);
       });
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error updating expense: ", error);
-      toast({ title: 'Erro', description: 'Não foi possível atualizar a despesa.', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (

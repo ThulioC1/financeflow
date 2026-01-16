@@ -6,8 +6,9 @@ import { Logo } from '@/components/icons';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar } from '@/components/ui/sidebar';
 import { BottomNav } from '@/components/layout/bottom-nav';
+import { SidebarInset } from '@/components/ui/sidebar';
 
 export default function DashboardLayout({
   children,
@@ -24,7 +25,8 @@ export default function DashboardLayout({
   }, [user, isUserLoading, router]);
 
   if (isUserLoading || !user) {
-    return null; // Or a loading spinner
+    // You can add a global loading spinner here
+    return null;
   }
 
   return (
@@ -41,8 +43,7 @@ export default function DashboardLayout({
           </div>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:justify-end">
-          <SidebarTrigger className="sm:hidden" />
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-end border-b bg-background/80 px-4 backdrop-blur-sm">
           <UserNav />
         </header>
         <main className="flex-1 p-4 pb-20 md:p-6 lg:p-8 md:pb-6 lg:pb-8">

@@ -32,11 +32,13 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, Timestamp } from 'firebase/firestore';
+import { doc, Timestamp, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Income } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 const incomeSchema = z.object({
     tipo: z.enum(['quinzena 1', 'quinzena 2', 'extra'], {required_error: "Selecione um tipo."}),
@@ -66,10 +68,12 @@ export function EditIncomeDialog({ income, open, onOpenChange }: EditIncomeDialo
     if (income) {
       form.reset({
         ...income,
-        dataRecebimento: income.dataRecebimento ? income.dataRecebimento.toDate() : undefined,
+        dataRecebimento: income.dataRecebimento && typeof income.dataRecebimento.toDate === 'function' 
+            ? income.dataRecebimento.toDate() 
+            : undefined,
       });
     }
-  }, [income, form, open]);
+  }, [income, open]);
 
   const status = form.watch('status');
   useEffect(() => {
@@ -90,25 +94,32 @@ export function EditIncomeDialog({ income, open, onOpenChange }: EditIncomeDialo
     }
     setLoading(true);
 
-    try {
-      const incomeDocRef = doc(db, 'users', user.uid, 'incomes', income.id);
-      const dataToUpdate = {
-        ...values,
-        dataRecebimento: values.dataRecebimento ? Timestamp.fromDate(values.dataRecebimento) : null,
-      };
-      updateDocumentNonBlocking(incomeDocRef, dataToUpdate as any);
-
-      toast({
-        title: 'Sucesso!',
-        description: 'Receita atualizada.',
+    const incomeDocRef = doc(db, 'users', user.uid, 'incomes', income.id);
+    const dataToUpdate = {
+      ...values,
+      dataRecebimento: values.dataRecebimento ? Timestamp.fromDate(values.dataRecebimento) : null,
+    };
+    
+    updateDoc(incomeDocRef, dataToUpdate as any)
+      .then(() => {
+        toast({
+          title: 'Sucesso!',
+          description: 'Receita atualizada.',
+        });
+        onOpenChange(false);
+      })
+      .catch((serverError) => {
+        console.error("Error updating income: ", serverError);
+        toast({ title: 'Erro', description: 'Não foi possível atualizar a receita.', variant: 'destructive' });
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: incomeDocRef.path,
+          operation: 'update',
+          requestResourceData: dataToUpdate
+        }));
+      })
+      .finally(() => {
+        setLoading(false);
       });
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error updating income: ", error);
-      toast({ title: 'Erro', description: 'Não foi possível atualizar a receita.', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (

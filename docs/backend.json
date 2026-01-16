@@ -4,189 +4,187 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the FinanceFlow application.",
+      "description": "Representa um usuário do aplicativo FinanceFlow.",
       "properties": {
-        "id": {
+        "uid": {
           "type": "string",
-          "description": "Unique identifier for the user.",
-          "format": "uuid"
+          "description": "Identificador único para o usuário (Firebase Auth UID)."
         },
-        "name": {
+        "nome": {
           "type": "string",
-          "description": "The user's full name."
+          "description": "O nome completo do usuário."
         },
         "email": {
           "type": "string",
-          "description": "The user's email address.",
+          "description": "O endereço de e-mail do usuário.",
           "format": "email"
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp indicating when the user account was created.",
+          "description": "Timestamp indicando quando a conta do usuário foi criada.",
           "format": "date-time"
         }
       },
       "required": [
-        "id",
-        "name",
+        "uid",
+        "nome",
         "email",
         "createdAt"
       ]
     },
     "Income": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Income",
+      "title": "Receita",
       "type": "object",
-      "description": "Represents an income entry for a user.",
+      "description": "Representa uma entrada de receita para um usuário.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the income entry.",
+          "description": "Identificador único para a entrada de receita.",
           "format": "uuid"
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the User who owns this income. (Relationship: User 1:N Income)"
+          "description": "Referência ao usuário que possui esta receita."
         },
-        "amount": {
+        "valor": {
           "type": "number",
-          "description": "The amount of the income."
+          "description": "O valor da receita."
         },
-        "type": {
+        "tipo": {
           "type": "string",
-          "description": "The type of income (e.g., quinzena 1, quinzena 2, extra)."
+          "description": "O tipo de receita (e.g., quinzena 1, quinzena 2, extra)."
         },
-        "referenceMonth": {
+        "mesReferencia": {
           "type": "string",
-          "description": "The month to which the income refers (YYYY-MM)."
+          "description": "O mês a que a receita se refere (AAAA-MM)."
         },
         "status": {
           "type": "string",
-          "description": "The status of the income (e.g., pending, paid)."
+          "description": "O status da receita (e.g., pendente, pago)."
         },
-        "receivedDate": {
+        "dataRecebimento": {
           "type": "string",
-          "description": "The date when the income was received.",
+          "description": "A data em que a receita foi recebida.",
           "format": "date-time"
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp indicating when the income entry was created.",
+          "description": "Timestamp indicando quando a entrada de receita foi criada.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "userId",
-        "amount",
-        "type",
-        "referenceMonth",
+        "valor",
+        "tipo",
+        "mesReferencia",
         "status",
-        "receivedDate",
         "createdAt"
       ]
     },
     "Expense": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Expense",
+      "title": "Despesa",
       "type": "object",
-      "description": "Represents an expense entry for a user.",
+      "description": "Representa uma entrada de despesa para um usuário.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the expense entry.",
+          "description": "Identificador único para a entrada de despesa.",
           "format": "uuid"
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the User who owns this expense. (Relationship: User 1:N Expense)"
+          "description": "Referência ao usuário que possui esta despesa."
         },
-        "description": {
+        "descricao": {
           "type": "string",
-          "description": "A description of the expense."
+          "description": "Uma descrição da despesa."
         },
-        "amount": {
+        "valor": {
           "type": "number",
-          "description": "The amount of the expense."
+          "description": "O valor da despesa."
         },
-        "category": {
+        "categoria": {
           "type": "string",
-          "description": "The category of the expense."
+          "description": "A categoria da despesa."
         },
-        "recurring": {
+        "recorrente": {
           "type": "boolean",
-          "description": "Indicates whether the expense is recurring."
+          "description": "Indica se a despesa é recorrente."
         },
-        "referenceMonth": {
+        "mesReferencia": {
           "type": "string",
-          "description": "The month to which the expense refers (YYYY-MM)."
+          "description": "O mês a que a despesa se refere (AAAA-MM)."
         },
         "status": {
           "type": "string",
-          "description": "The status of the expense (e.g., paid, pending)."
+          "description": "O status da despesa (e.g., pago, pendente)."
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp indicating when the expense entry was created.",
+          "description": "Timestamp indicando quando a entrada de despesa foi criada.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "userId",
-        "description",
-        "amount",
-        "category",
-        "recurring",
-        "referenceMonth",
+        "descricao",
+        "valor",
+        "categoria",
+        "recorrente",
+        "mesReferencia",
         "status",
         "createdAt"
       ]
     },
     "Balance": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Balance",
+      "title": "Saldo",
       "type": "object",
-      "description": "Represents the balance for a user for a specific month.",
+      "description": "Representa o saldo de um usuário para um mês específico.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the balance entry.",
+          "description": "Identificador único para a entrada de saldo.",
           "format": "uuid"
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the User who owns this balance. (Relationship: User 1:N Balance)"
+          "description": "Referência ao usuário que possui este saldo."
         },
-        "referenceMonth": {
+        "mesReferencia": {
           "type": "string",
-          "description": "The month to which the balance refers (YYYY-MM)."
+          "description": "O mês a que o saldo se refere (AAAA-MM)."
         },
-        "initialBalance": {
+        "saldoInicial": {
           "type": "number",
-          "description": "The initial balance for the month."
+          "description": "O saldo inicial do mês."
         },
-        "totalIncome": {
+        "totalReceitas": {
           "type": "number",
-          "description": "The total income for the month."
+          "description": "O total de receitas do mês."
         },
-        "totalExpenses": {
+        "totalDespesas": {
           "type": "number",
-          "description": "The total expenses for the month."
+          "description": "O total de despesas do mês."
         },
-        "finalBalance": {
+        "saldoFinal": {
           "type": "number",
-          "description": "The final balance for the month."
+          "description": "O saldo final do mês."
         }
       },
       "required": [
         "id",
         "userId",
-        "referenceMonth",
-        "initialBalance",
-        "totalIncome",
-        "totalExpenses",
-        "finalBalance"
+        "mesReferencia",
+        "saldoInicial",
+        "totalReceitas",
+        "totalDespesas",
+        "saldoFinal"
       ]
     }
   },
@@ -205,11 +203,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profile information. Path-based ownership ensures only the user can access their profile.",
+          "description": "Armazena informações do perfil do usuário. A propriedade baseada no caminho garante que apenas o usuário possa acessar seu perfil.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "O identificador único do usuário."
             }
           ]
         }
@@ -221,15 +219,15 @@
           "schema": {
             "$ref": "#/backend/entities/Income"
           },
-          "description": "Stores income entries for a specific user. Path-based ownership ensures only the user can access their income data.",
+          "description": "Armazena entradas de receita para um usuário específico. A propriedade baseada no caminho garante que apenas o usuário possa acessar seus dados de receita.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "O identificador único do usuário."
             },
             {
               "name": "incomeId",
-              "description": "The unique identifier of the income entry."
+              "description": "O identificador único da entrada de receita."
             }
           ]
         }
@@ -241,15 +239,15 @@
           "schema": {
             "$ref": "#/backend/entities/Expense"
           },
-          "description": "Stores expense entries for a specific user. Path-based ownership ensures only the user can access their expense data.",
+          "description": "Armazena entradas de despesa para um usuário específico. A propriedade baseada no caminho garante que apenas o usuário possa acessar seus dados de despesa.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "O identificador único do usuário."
             },
             {
               "name": "expenseId",
-              "description": "The unique identifier of the expense entry."
+              "description": "O identificador único da entrada de despesa."
             }
           ]
         }
@@ -261,15 +259,15 @@
           "schema": {
             "$ref": "#/backend/entities/Balance"
           },
-          "description": "Stores balance information for a specific user. Path-based ownership ensures only the user can access their balance data.",
+          "description": "Armazena informações de saldo para um usuário específico. A propriedade baseada no caminho garante que apenas o usuário possa acessar seus dados de saldo.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "O identificador único do usuário."
             },
             {
               "name": "balanceId",
-              "description": "The unique identifier of the balance entry."
+              "description": "O identificador único da entrada de saldo."
             }
           ]
         }

@@ -64,19 +64,19 @@ service cloud.firestore {
     /**
      * Validates a new user profile document on creation.
      * Ensures the user is creating their own document and that the document's
-     * internal `id` field correctly matches their user ID for relational integrity.
+     * internal `uid` field correctly matches their user ID for relational integrity.
      */
     function isCreatingOwnProfile(userId) {
-      return isOwner(userId) && request.resource.data.id == userId;
+      return isOwner(userId) && request.resource.data.uid == userId;
     }
 
     /**
      * Validates a user profile document on update.
-     * Ensures the user is updating their own document and that the unique `id`
+     * Ensures the user is updating their own document and that the unique `uid`
      * field is not being changed.
      */
     function isUpdatingOwnProfile(userId) {
-      return isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      return isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
     }
 
     /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import {
@@ -20,17 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Mock data, to be replaced by Firestore data
-const mockExpenses: Expense[] = [
-    { id: '1', userId: '123', descricao: 'Aluguel', categoria: 'Moradia', recorrente: true, valor: 1500, mesReferencia: '2024-07', status: 'pago', createdAt: new Date() as any },
-    { id: '2', userId: '123', descricao: 'Supermercado', categoria: 'Alimentação', recorrente: false, valor: 650.45, mesReferencia: '2024-07', status: 'pago', createdAt: new Date() as any },
-    { id: '3', userId: '123', descricao: 'Internet', categoria: 'Contas', recorrente: true, valor: 99.90, mesReferencia: '2024-07', status: 'pendente', createdAt: new Date() as any },
-    { id: '4', userId: '123', descricao: 'Cinema', categoria: 'Lazer', recorrente: false, valor: 80, mesReferencia: '2024-07', status: 'pago', createdAt: new Date() as any },
-    { id: '5', userId: '123', descricao: 'Conta de Luz', categoria: 'Contas', recorrente: true, valor: 120.50, mesReferencia: '2024-06', status: 'pago', createdAt: new Date() as any },
-    { id: '6', userId: '123', descricao: 'Jantar fora', categoria: 'Alimentação', recorrente: false, valor: 150.00, mesReferencia: '2024-06', status: 'pago', createdAt: new Date() as any },
-    { id: '7', userId: '123', descricao: 'Academia', categoria: 'Saúde', recorrente: true, valor: 90, mesReferencia: '2024-05', status: 'pago', createdAt: new Date() as any },
-];
+import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
+import { collection, doc } from "firebase/firestore";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useToast } from "@/hooks/use-toast";
+import { AddExpenseDialog } from "@/components/dashboard/add-expense-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -39,16 +34,47 @@ const formatCurrency = (value: number) => {
 const formatMonth = (month: string) => {
     const [year, m] = month.split('-');
     const date = new Date(Number(year), Number(m) - 1);
-    return date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    return date.toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 };
 
 
 export default function DespesasPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
 
-  const availableMonths = [...new Set(mockExpenses.map(e => e.mesReferencia))].sort().reverse();
+  const db = useFirestore();
+  const { user } = useUser();
+  const { toast } = useToast();
 
-  const filteredExpenses = mockExpenses.filter(expense => expense.mesReferencia === selectedMonth);
+  const expensesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'expenses');
+  }, [db, user]);
+
+  const { data: allExpenses, isLoading } = useCollection<Expense>(expensesQuery);
+
+  const availableMonths = useMemo(() => {
+    if (!allExpenses) return [selectedMonth];
+    const months = [...new Set(allExpenses.map(e => e.mesReferencia))];
+    if (!months.includes(selectedMonth)) {
+        months.push(selectedMonth);
+    }
+    return months.sort().reverse();
+  }, [allExpenses, selectedMonth]);
+
+  const filteredExpenses = useMemo(() => {
+    if (!allExpenses) return [];
+    return allExpenses.filter(expense => expense.mesReferencia === selectedMonth);
+  }, [allExpenses, selectedMonth]);
+
+  const handleMarkAsPaid = (expenseId: string) => {
+    if (!user) return;
+    const expenseRef = doc(db, 'users', user.uid, 'expenses', expenseId);
+    updateDocumentNonBlocking(expenseRef, { status: 'pago' });
+    toast({
+        title: 'Despesa atualizada!',
+        description: 'A despesa foi marcada como paga.'
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -58,7 +84,7 @@ export default function DespesasPage() {
             <p className="text-muted-foreground">Controle seus gastos mensais.</p>
         </div>
         <div className="flex items-center gap-2">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
                 <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue placeholder="Selecione um mês" />
                 </SelectTrigger>
@@ -70,10 +96,12 @@ export default function DespesasPage() {
                     ))}
                 </SelectContent>
             </Select>
-            <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar Despesa
-            </Button>
+            <AddExpenseDialog>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Adicionar Despesa
+                </Button>
+            </AddExpenseDialog>
         </div>
       </div>
 
@@ -89,7 +117,17 @@ export default function DespesasPage() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {filteredExpenses.length > 0 ? (
+                {isLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                             <TableCell className="text-right"><Skeleton className="h-8 w-32 ml-auto" /></TableCell>
+                        </TableRow>
+                    ))
+                ) : filteredExpenses.length > 0 ? (
                     filteredExpenses.map((expense) => (
                         <TableRow key={expense.id}>
                             <TableCell className="font-medium">{expense.descricao}</TableCell>
@@ -98,13 +136,13 @@ export default function DespesasPage() {
                             </TableCell>
                             <TableCell className="text-right">{formatCurrency(expense.valor)}</TableCell>
                             <TableCell>
-                                <Badge variant={expense.status === 'pago' ? 'default' : 'secondary'} className={expense.status === 'pago' ? 'bg-green-500/80 hover:bg-green-500' : ''}>
+                                <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'}>
                                     {expense.status}
                                 </Badge>
                             </TableCell>
                              <TableCell className="text-right">
                                  {expense.status === 'pendente' && (
-                                    <Button variant="outline" size="sm">Marcar como pago</Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleMarkAsPaid(expense.id)}>Marcar como pago</Button>
                                  )}
                             </TableCell>
                         </TableRow>

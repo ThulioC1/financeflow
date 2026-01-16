@@ -7,6 +7,7 @@ import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
+import { BottomNav } from '@/components/layout/bottom-nav';
 
 export default function DashboardLayout({
   children,
@@ -34,7 +35,9 @@ export default function DashboardLayout({
                <Logo className="h-8 w-8 shrink-0"/>
                <span className="font-headline text-xl font-semibold">FinanceFlow</span>
             </div>
-            <MainNav />
+            <div className="hidden md:block">
+              <MainNav />
+            </div>
           </div>
       </Sidebar>
       <SidebarInset>
@@ -42,9 +45,10 @@ export default function DashboardLayout({
           <SidebarTrigger className="sm:hidden" />
           <UserNav />
         </header>
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 p-4 pb-20 md:p-6 lg:p-8 md:pb-6 lg:pb-8">
           {children}
         </main>
+        <BottomNav />
       </SidebarInset>
     </SidebarProvider>
   );

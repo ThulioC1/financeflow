@@ -114,6 +114,7 @@ export default function DashboardPage() {
                 Resumo financeiro para {formatMonth(selectedMonth)}.
             </p>
         </div>
+        <div className="w-full sm:w-auto">
          <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
             <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Selecione um mês" />
@@ -126,6 +127,7 @@ export default function DashboardPage() {
                 ))}
             </SelectContent>
         </Select>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

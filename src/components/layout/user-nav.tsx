@@ -18,7 +18,7 @@ import {
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { LifeBuoy, LogOut, Settings, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function UserNav() {
@@ -70,16 +70,15 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <User /> Perfil
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Settings /> Configurações
+          <DropdownMenuItem disabled>
+            <User className="mr-2 h-4 w-4" />
+            <span>Perfil</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={handleSignOut}>
-          <LogOut /> Sair
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Sair</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -102,6 +102,7 @@ export default function DespesasPage() {
   return (
     <>
     <EditExpenseDialog
+        key={editingExpense?.id}
         expense={editingExpense}
         open={!!editingExpense}
         onOpenChange={(open) => !open && setEditingExpense(null)}

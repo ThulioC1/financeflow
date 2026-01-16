@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -62,7 +62,14 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
 
   const form = useForm<z.infer<typeof expenseSchema>>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: {
+    defaultValues: expense ? {
+      descricao: expense.descricao,
+      valor: expense.valor,
+      categoria: expense.categoria,
+      recorrente: expense.recorrente,
+      mesReferencia: expense.mesReferencia,
+      status: expense.status,
+    } : {
       descricao: '',
       valor: 0,
       categoria: '',
@@ -71,19 +78,6 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
       status: 'pendente',
     },
   });
-
-  useEffect(() => {
-    if (expense) {
-      form.reset({
-        descricao: expense.descricao,
-        valor: expense.valor,
-        categoria: expense.categoria,
-        recorrente: expense.recorrente,
-        mesReferencia: expense.mesReferencia,
-        status: expense.status,
-      });
-    }
-  }, [expense, form]);
 
   const onSubmit = (values: z.infer<typeof expenseSchema>) => {
     if (!user || !expense) {

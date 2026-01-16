@@ -306,17 +306,17 @@ export default function DespesasPage() {
          ) : filteredAndRecurringExpenses.length > 0 ? (
            filteredAndRecurringExpenses.map((expense) => (
             <Card key={expense.id} className={cn("w-full", expense.isProjected ? "opacity-50" : "")}>
-                <CardHeader>
+                <CardHeader className="p-4">
                     <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                            <CardTitle className='text-base'>{expense.descricao}</CardTitle>
+                        <div className="space-y-1.5">
+                            <CardTitle className='text-base leading-none'>{expense.descricao}</CardTitle>
                             <CardDescription>
                                 <Badge variant="outline" className='text-xs'>{expense.categoria}</Badge>
                             </CardDescription>
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild disabled={expense.isProjected}>
-                                <Button variant="ghost" className="h-8 w-8 p-0 -mt-2 -mr-2" disabled={expense.isProjected}>
+                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={expense.isProjected}>
                                     <span className="sr-only">Abrir menu</span>
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
@@ -339,7 +339,7 @@ export default function DespesasPage() {
                         </DropdownMenu>
                     </div>
                 </CardHeader>
-                <CardContent className="flex items-end justify-between text-sm pt-2">
+                <CardContent className="flex items-end justify-between text-sm p-4 pt-0">
                     <div className="space-y-1">
                         <div className='flex items-center gap-2'>
                           <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'} className='capitalize'>
@@ -352,7 +352,7 @@ export default function DespesasPage() {
                           )}
                         </div>
                     </div>
-                    <p className="font-semibold text-lg">{formatCurrency(expense.valor)}</p>
+                    <p className="font-semibold text-base">{formatCurrency(expense.valor)}</p>
                 </CardContent>
             </Card>
            ))

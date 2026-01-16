@@ -45,6 +45,8 @@ import { useToast } from "@/hooks/use-toast";
 import { AddExpenseDialog } from "@/components/dashboard/add-expense-dialog";
 import { EditExpenseDialog } from "@/components/dashboard/edit-expense-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -101,7 +103,7 @@ export default function DespesasPage() {
     }
 
     return Array.from(months).sort().reverse();
-  }, [allExpenses]);
+  }, [allExpenses, selectedMonth]);
 
   const filteredAndRecurringExpenses = useMemo(() => {
     if (!allExpenses) return [];
@@ -141,7 +143,7 @@ export default function DespesasPage() {
         }
     });
 
-    return [...expensesForSelectedMonth, ...projectedExpenses];
+    return [...expensesForSelectedMonth, ...projectedExpenses].sort((a,b) => a.descricao.localeCompare(b.descricao));
   }, [allExpenses, selectedMonth]);
 
   const handleDeleteConfirm = () => {
@@ -209,7 +211,8 @@ export default function DespesasPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border shadow-sm">
+      {/* Desktop Table View */}
+      <div className="hidden rounded-lg border shadow-sm md:block">
         <Table>
             <TableHeader>
                 <TableRow>
@@ -223,7 +226,7 @@ export default function DespesasPage() {
             </TableHeader>
             <TableBody>
                 {isLoading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
+                    Array.from({ length: 5 }).map((_, i) => (
                         <TableRow key={i}>
                             <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -284,6 +287,83 @@ export default function DespesasPage() {
             </TableBody>
         </Table>
       </div>
+
+       {/* Mobile Card View */}
+       <div className="grid gap-4 md:hidden">
+         {isLoading ? (
+           Array.from({ length: 5 }).map((_, i) => (
+             <Card key={i}>
+               <CardHeader>
+                 <Skeleton className="h-6 w-3/4" />
+                 <Skeleton className="h-5 w-1/4 mt-1" />
+               </CardHeader>
+               <CardContent className="flex justify-between items-center pt-2">
+                 <Skeleton className="h-6 w-1/3" />
+                 <Skeleton className="h-5 w-1/4" />
+               </CardContent>
+             </Card>
+           ))
+         ) : filteredAndRecurringExpenses.length > 0 ? (
+           filteredAndRecurringExpenses.map((expense) => (
+            <Card key={expense.id} className={cn("w-full", expense.isProjected ? "opacity-50" : "")}>
+                <CardHeader>
+                    <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                            <CardTitle className='text-base'>{expense.descricao}</CardTitle>
+                            <CardDescription>
+                                <Badge variant="outline" className='text-xs'>{expense.categoria}</Badge>
+                            </CardDescription>
+                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild disabled={expense.isProjected}>
+                                <Button variant="ghost" className="h-8 w-8 p-0 -mt-2 -mr-2" disabled={expense.isProjected}>
+                                    <span className="sr-only">Abrir menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => setEditingExpense(expense)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    className="text-red-600 focus:text-red-500 focus:bg-red-50"
+                                    onClick={() => setDeletingExpenseId(expense.id)}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Excluir
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </CardHeader>
+                <CardContent className="flex items-end justify-between text-sm pt-2">
+                    <div className="space-y-1">
+                        <div className='flex items-center gap-2'>
+                          <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'} className='capitalize'>
+                            {expense.status}
+                          </Badge>
+                          {expense.status === 'pago' && (
+                            <span className="text-muted-foreground text-xs">
+                              {formatDate(expense.dataPagamento)}
+                            </span>
+                          )}
+                        </div>
+                    </div>
+                    <p className="font-semibold text-lg">{formatCurrency(expense.valor)}</p>
+                </CardContent>
+            </Card>
+           ))
+         ) : (
+           <Card>
+             <CardContent className="flex h-24 items-center justify-center text-center text-muted-foreground">
+               <p>Nenhuma despesa para este mês.</p>
+             </CardContent>
+           </Card>
+         )}
+       </div>
     </div>
     </>
   );

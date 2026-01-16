@@ -45,6 +45,8 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -90,7 +92,7 @@ export default function ReceitasPage() {
 
     const filteredIncomes = useMemo(() => {
         if (!allIncomes) return [];
-        return allIncomes.filter(income => income.mesReferencia === selectedMonth);
+        return allIncomes.filter(income => income.mesReferencia === selectedMonth).sort((a,b) => a.tipo.localeCompare(b.tipo));
     }, [allIncomes, selectedMonth]);
 
     const handleDeleteConfirm = () => {
@@ -158,7 +160,8 @@ export default function ReceitasPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border shadow-sm">
+      {/* Desktop Table View */}
+      <div className="hidden rounded-lg border shadow-sm md:block">
         <Table>
             <TableHeader>
                 <TableRow>
@@ -228,6 +231,80 @@ export default function ReceitasPage() {
             </TableBody>
         </Table>
       </div>
+
+       {/* Mobile Card View */}
+       <div className="grid gap-4 md:hidden">
+         {isLoading ? (
+           Array.from({ length: 3 }).map((_, i) => (
+             <Card key={i}>
+               <CardHeader>
+                 <Skeleton className="h-6 w-3/4" />
+               </CardHeader>
+               <CardContent className="flex justify-between items-center pt-2">
+                 <Skeleton className="h-6 w-1/3" />
+                 <Skeleton className="h-5 w-1/4" />
+               </CardContent>
+             </Card>
+           ))
+         ) : filteredIncomes.length > 0 ? (
+           filteredIncomes.map((income) => (
+            <Card key={income.id} className="w-full">
+                <CardHeader>
+                    <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                            <CardTitle className='text-base capitalize'>{income.tipo}</CardTitle>
+                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0 -mt-2 -mr-2">
+                                    <span className="sr-only">Abrir menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => setEditingIncome(income)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    className="text-red-600 focus:text-red-500 focus:bg-red-50"
+                                    onClick={() => setDeletingIncomeId(income.id)}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Excluir
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </CardHeader>
+                <CardContent className="flex items-end justify-between text-sm pt-2">
+                    <div className="space-y-1">
+                        <div className='flex items-center gap-2'>
+                          <Badge variant={income.status === 'pago' ? 'success' : 'destructive'} className='capitalize'>
+                            {income.status}
+                          </Badge>
+                          {income.status === 'pago' && (
+                            <span className="text-muted-foreground text-xs">
+                              {formatDate(income.dataRecebimento)}
+                            </span>
+                          )}
+                        </div>
+                    </div>
+                    <p className="font-semibold text-lg">{formatCurrency(income.valor)}</p>
+                </CardContent>
+            </Card>
+           ))
+         ) : (
+           <Card>
+             <CardContent className="flex h-24 items-center justify-center text-center text-muted-foreground">
+               <p>Nenhuma receita para este mês.</p>
+             </CardContent>
+           </Card>
+         )}
+       </div>
+
     </div>
     </>
   );

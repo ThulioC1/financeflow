@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, Timestamp } from "firebase/firestore";
 import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { AddExpenseDialog } from "@/components/dashboard/add-expense-dialog";
@@ -56,6 +56,11 @@ const formatMonth = (month: string) => {
     return date.toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 };
 
+const formatDate = (date: Timestamp | undefined) => {
+    if (!date) return '-';
+    const d = date.toDate();
+    return d.toLocaleDateString('pt-BR');
+}
 
 export default function DespesasPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
@@ -159,8 +164,9 @@ export default function DespesasPage() {
                 <TableRow>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Categoria</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Data Pagamento</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
                     <TableHead className="w-[80px] text-right">Ações</TableHead>
                 </TableRow>
             </TableHeader>
@@ -170,8 +176,9 @@ export default function DespesasPage() {
                         <TableRow key={i}>
                             <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                            <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                              <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                         </TableRow>
                     ))
@@ -182,12 +189,13 @@ export default function DespesasPage() {
                             <TableCell>
                                 <Badge variant="outline">{expense.categoria}</Badge>
                             </TableCell>
-                            <TableCell className="text-right">{formatCurrency(expense.valor)}</TableCell>
                             <TableCell>
                                 <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'}>
                                     {expense.status}
                                 </Badge>
                             </TableCell>
+                            <TableCell>{formatDate(expense.dataPagamento)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(expense.valor)}</TableCell>
                              <TableCell className="text-right">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -217,7 +225,7 @@ export default function DespesasPage() {
                     ))
                 ) : (
                     <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">
+                        <TableCell colSpan={6} className="text-center h-24">
                             Nenhuma despesa encontrada para este mês.
                         </TableCell>
                     </TableRow>

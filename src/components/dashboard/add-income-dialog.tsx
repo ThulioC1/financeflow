@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -34,20 +34,16 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { Loader2, CalendarIcon } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 const incomeSchema = z.object({
   tipo: z.enum(['quinzena 1', 'quinzena 2', 'extra'], {required_error: "Selecione um tipo."}),
   valor: z.coerce.number().positive({ message: 'Valor deve ser positivo.' }),
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
   status: z.enum(['pago', 'pendente']).default('pendente'),
-  dataRecebimento: z.date().optional(),
+  dataRecebimento: z.coerce.date().optional(),
 });
 
 export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
@@ -65,6 +61,17 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
       status: 'pendente',
     },
   });
+
+  const status = form.watch('status');
+  useEffect(() => {
+    if (status === 'pago') {
+      if (!form.getValues('dataRecebimento')) {
+        form.setValue('dataRecebimento', new Date());
+      }
+    } else {
+      form.setValue('dataRecebimento', undefined);
+    }
+  }, [status, form]);
 
   const onSubmit = (values: z.infer<typeof incomeSchema>) => {
     if (!user) {
@@ -101,7 +108,12 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+            form.reset();
+        }
+        setOpen(isOpen);
+    }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -170,14 +182,7 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
                         <FormControl>
                             <Switch
                             checked={field.value === 'pago'}
-                            onCheckedChange={(checked) => {
-                                field.onChange(checked ? 'pago' : 'pendente');
-                                if (checked) {
-                                    form.setValue('dataRecebimento', new Date());
-                                } else {
-                                    form.setValue('dataRecebimento', undefined);
-                                }
-                            }}
+                            onCheckedChange={(checked) => field.onChange(checked ? 'pago' : 'pendente')}
                             />
                         </FormControl>
                         <FormLabel className="font-normal">
@@ -187,50 +192,25 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
                     )}
                     />
 
-                {form.watch('status') === 'pago' && (
-                    <FormField
-                        control={form.control}
-                        name="dataRecebimento"
-                        render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                            <Popover>
-                            <PopoverTrigger asChild>
-                                <FormControl>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                    "w-[200px] pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                    )}
-                                >
-                                    {field.value ? (
-                                    format(field.value, "PPP", { locale: ptBR })
-                                    ) : (
-                                    <span>Data de Recebimento</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                                </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                    date > new Date() || date < new Date("1900-01-01")
-                                }
-                                initialFocus
-                                />
-                            </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                )}
+                <FormField
+                    control={form.control}
+                    name="dataRecebimento"
+                    render={({ field }) => (
+                    <FormItem className={cn('flex flex-col', status !== 'pago' && 'hidden')}>
+                        <FormLabel>Data de Recebimento</FormLabel>
+                        <FormControl>
+                            <Input 
+                                type="date" 
+                                {...field}
+                                value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                                onChange={(e) => field.onChange(e.target.valueAsDate)}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
             </div>
-
 
             <DialogFooter>
               <Button type="submit" disabled={loading}>

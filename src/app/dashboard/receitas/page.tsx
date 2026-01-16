@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,13 +11,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import type { Income } from "@/lib/types";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
-import { collection, doc, serverTimestamp, Timestamp } from "firebase/firestore";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { collection, doc, Timestamp } from "firebase/firestore";
+import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { AddIncomeDialog } from "@/components/dashboard/add-income-dialog";
+import { EditIncomeDialog } from "@/components/dashboard/edit-income-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     Select,
@@ -46,6 +65,8 @@ const formatMonth = (month: string) => {
 
 export default function ReceitasPage() {
     const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+    const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+    const [deletingIncomeId, setDeletingIncomeId] = useState<string | null>(null);
 
     const db = useFirestore();
     const { user } = useUser();
@@ -72,20 +93,43 @@ export default function ReceitasPage() {
         return allIncomes.filter(income => income.mesReferencia === selectedMonth);
     }, [allIncomes, selectedMonth]);
 
-    const handleMarkAsPaid = (incomeId: string) => {
-        if (!user) return;
-        const incomeRef = doc(db, 'users', user.uid, 'incomes', incomeId);
-        updateDocumentNonBlocking(incomeRef, { 
-            status: 'pago',
-            dataRecebimento: serverTimestamp() 
-        });
+    const handleDeleteConfirm = () => {
+        if (!user || !deletingIncomeId) return;
+        const incomeRef = doc(db, 'users', user.uid, 'incomes', deletingIncomeId);
+        deleteDocumentNonBlocking(incomeRef);
         toast({
-            title: 'Receita atualizada!',
-            description: 'A receita foi marcada como paga.'
+            title: 'Receita excluída!',
+            description: 'Sua receita foi removida com sucesso.'
         });
+        setDeletingIncomeId(null);
     };
 
   return (
+    <>
+    <EditIncomeDialog
+        key={editingIncome?.id}
+        income={editingIncome}
+        open={!!editingIncome}
+        onOpenChange={(open) => !open && setEditingIncome(null)}
+    />
+    <AlertDialog
+        open={!!deletingIncomeId}
+        onOpenChange={(open) => !open && setDeletingIncomeId(null)}
+    >
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Essa ação não pode ser desfeita. Isso excluirá permanentemente a receita.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteConfirm}>Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
     <div className="space-y-6">
        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -119,10 +163,10 @@ export default function ReceitasPage() {
             <TableHeader>
                 <TableRow>
                     <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Data de Recebimento</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="w-[80px] text-right">Ações</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -130,27 +174,47 @@ export default function ReceitasPage() {
                     Array.from({ length: 3 }).map((_, i) => (
                         <TableRow key={i}>
                             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                            <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                             <TableCell className="text-right"><Skeleton className="h-8 w-32 ml-auto" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                             <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                         </TableRow>
                     ))
                 ) : filteredIncomes.length > 0 ? (
                     filteredIncomes.map((income) => (
                         <TableRow key={income.id}>
                             <TableCell className="font-medium capitalize">{income.tipo}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(income.valor)}</TableCell>
                             <TableCell>
                                 <Badge variant={income.status === 'pago' ? 'success' : 'destructive'}>
                                     {income.status}
                                 </Badge>
                             </TableCell>
                             <TableCell>{formatDate(income.dataRecebimento)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(income.valor)}</TableCell>
                             <TableCell className="text-right">
-                                {income.status === 'pendente' && (
-                                    <Button variant="outline" size="sm" onClick={() => handleMarkAsPaid(income.id)}>Marcar como pago</Button>
-                                )}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Abrir menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                        <DropdownMenuItem onClick={() => setEditingIncome(income)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Editar
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            className="text-red-600 focus:text-red-500 focus:bg-red-50"
+                                            onClick={() => setDeletingIncomeId(income.id)}
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Excluir
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                     ))
@@ -165,5 +229,6 @@ export default function ReceitasPage() {
         </Table>
       </div>
     </div>
+    </>
   );
 }

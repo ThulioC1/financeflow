@@ -31,6 +31,7 @@ export interface Expense {
   mesReferencia: string; // YYYY-MM
   status: EntryStatus;
   createdAt: Timestamp;
+  dataPagamento?: Timestamp;
 }
 
 export interface Balance {

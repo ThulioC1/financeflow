@@ -123,6 +123,11 @@
           "type": "string",
           "description": "O status da despesa (e.g., pago, pendente)."
         },
+        "dataPagamento": {
+          "type": "string",
+          "description": "A data em que a despesa foi paga.",
+          "format": "date-time"
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicando quando a entrada de despesa foi criada.",
@@ -273,6 +278,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure data isolation between users and efficient querying of financial data. Each user's data (incomes, expenses, and balances) is stored under their respective user ID, enabling secure and straightforward security rules. The path-based ownership pattern (`/users/{userId}/incomes/{incomeId}`, `/users/{userId}/expenses/{expenseId}`, `/users/{userId}/balances/{balanceId}`) guarantees that users can only access their own data, adhering to the application's security requirements.\n\n**Authorization Independence:**\n\n*   The structure inherently achieves Authorization Independence. Each document (income, expense, balance) is stored within a path specific to a user (`/users/{userId}`). This eliminates the need for `get()` calls in security rules to validate ownership. The security rules can directly verify `request.auth.uid == userId` to grant access, making the authorization process atomic and independent of other documents.\n\n**QAPs Support:**\n\n*   The structure supports secure `list` operations because each user's data is segregated into its own subcollection. Security rules can allow listing operations based on the `userId` in the path, preventing unauthorized access to other users' data.\n*   The segregation of data into separate collections (`incomes`, `expenses`, `balances`) also simplifies security rules by ensuring that all documents within a collection share the same security requirements. This avoids the need for complex rule logic based on document content.\n\nThis design promotes clarity, security, and scalability, aligning with the application's requirements for a personal finance management system."
+    "reasoning": "The Firestore structure is designed to ensure data isolation between users and efficient querying of financial data. Each user's data (incomes, expenses, and balances) is stored under their respective user ID, enabling secure and straightforward security rules. The path-based ownership pattern (`/users/{userId}/incomes/{incomeId}`, `/users/{userId}/expenses/{expenseId}`, `/users/{userId}/balances/{balanceId}`) guarantees that users can only access their own data, adhering to the application's security requirements.\\n\\n**Authorization Independence:**\\n\\n*   The structure inherently achieves Authorization Independence. Each document (income, expense, balance) is stored within a path specific to a user (`/users/{userId}`). This eliminates the need for `get()` calls in security rules to validate ownership. The security rules can directly verify `request.auth.uid == userId` to grant access, making the authorization process atomic and independent of other documents.\\n\\n**QAPs Support:**\\n\\n*   The structure supports secure `list` operations because each user's data is segregated into its own subcollection. Security rules can allow listing operations based on the `userId` in the path, preventing unauthorized access to other users' data.\\n*   The segregation of data into separate collections (`incomes`, `expenses`, `balances`) also simplifies security rules by ensuring that all documents within a collection share the same security requirements. This avoids the need for complex rule logic based on document content.\\n\\nThis design promotes clarity, security, and scalability, aligning with the application's requirements for a personal finance management system."
   }
 }

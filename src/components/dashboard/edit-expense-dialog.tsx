@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,10 +32,11 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, Timestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Expense } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const expenseSchema = z.object({
   descricao: z.string().min(2, { message: 'Descrição deve ter pelo menos 2 caracteres.' }),
@@ -44,6 +45,7 @@ const expenseSchema = z.object({
   recorrente: z.boolean().default(false),
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
   status: z.enum(['pago', 'pendente']).default('pendente'),
+  dataPagamento: z.coerce.date().optional(),
 });
 
 const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Outros'];
@@ -62,22 +64,28 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
 
   const form = useForm<z.infer<typeof expenseSchema>>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: expense ? {
-      descricao: expense.descricao,
-      valor: expense.valor,
-      categoria: expense.categoria,
-      recorrente: expense.recorrente,
-      mesReferencia: expense.mesReferencia,
-      status: expense.status,
-    } : {
-      descricao: '',
-      valor: 0,
-      categoria: '',
-      recorrente: false,
-      mesReferencia: new Date().toISOString().slice(0, 7),
-      status: 'pendente',
-    },
   });
+
+  useEffect(() => {
+    if (expense) {
+      form.reset({
+        ...expense,
+        dataPagamento: expense.dataPagamento ? expense.dataPagamento.toDate() : undefined,
+      });
+    }
+  }, [expense, form, open]);
+
+  const status = form.watch('status');
+  useEffect(() => {
+      if (status === 'pago') {
+          if (!form.getValues('dataPagamento')) {
+              form.setValue('dataPagamento', new Date());
+          }
+      } else {
+          form.setValue('dataPagamento', undefined);
+      }
+  }, [status, form]);
+
 
   const onSubmit = (values: z.infer<typeof expenseSchema>) => {
     if (!user || !expense) {
@@ -88,7 +96,13 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
 
     try {
       const expenseDocRef = doc(db, 'users', user.uid, 'expenses', expense.id);
-      updateDocumentNonBlocking(expenseDocRef, values);
+      const dataToUpdate = {
+        ...values,
+        dataPagamento: values.dataPagamento ? Timestamp.fromDate(values.dataPagamento) : null,
+      };
+      // Type assertion because updateDoc doesn't like `undefined` but it works to delete a field.
+      // Firestore will remove the field if the value is undefined. `null` is also an option.
+      updateDocumentNonBlocking(expenseDocRef, dataToUpdate as any);
 
       toast({
         title: 'Sucesso!',
@@ -115,20 +129,20 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
         {expense && (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+               <FormField
+                    control={form.control}
+                    name="descricao"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Descrição</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ex: Aluguel" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
               <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                      control={form.control}
-                      name="descricao"
-                      render={({ field }) => (
-                          <FormItem className="col-span-2">
-                          <FormLabel>Descrição</FormLabel>
-                          <FormControl>
-                              <Input placeholder="Ex: Aluguel" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
                   <FormField
                       control={form.control}
                       name="valor"
@@ -148,7 +162,7 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
                       render={({ field }) => (
                           <FormItem>
                               <FormLabel>Categoria</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                   <SelectTrigger>
                                       <SelectValue placeholder="Selecione" />
@@ -176,6 +190,41 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
                       </FormItem>
                   )}
                   />
+               <div className="flex items-center space-x-4">
+                    <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0 pt-2">
+                            <FormControl>
+                                <Switch
+                                checked={field.value === 'pago'}
+                                onCheckedChange={(checked) => field.onChange(checked ? 'pago' : 'pendente')}
+                                />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                                Já foi pago?
+                            </FormLabel>
+                            </FormItem>
+                        )}
+                        />
+                    <FormField
+                        control={form.control}
+                        name="dataPagamento"
+                        render={({ field }) => (
+                        <FormItem className={cn('flex flex-col', status !== 'pago' && 'hidden')}>
+                            <FormLabel>Data de Pagamento</FormLabel>
+                            <FormControl>
+                            <Input type="date" 
+                                onChange={(e) => field.onChange(e.target.valueAsDate)}
+                                value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                            />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </div>
               <div className="flex items-center justify-between">
                   <FormField
                   control={form.control}
@@ -190,23 +239,6 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
                       </FormControl>
                       <FormLabel className="font-normal">
                           É recorrente?
-                      </FormLabel>
-                      </FormItem>
-                  )}
-                  />
-                   <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                      <FormControl>
-                          <Switch
-                          checked={field.value === 'pago'}
-                          onCheckedChange={(checked) => field.onChange(checked ? 'pago' : 'pendente')}
-                          />
-                      </FormControl>
-                      <FormLabel className="font-normal">
-                          Já foi pago?
                       </FormLabel>
                       </FormItem>
                   )}

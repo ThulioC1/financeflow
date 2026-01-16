@@ -3,8 +3,18 @@ import type { SVGProps } from 'react';
 export function Logo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-      <path d="M20 0C8.95431 0 0 8.95431 0 20C0 31.0457 8.95431 40 20 40C31.0457 40 40 31.0457 40 20C40 8.95431 31.0457 0 20 0Z" fill="hsl(var(--primary))"/>
-      <path d="M12.2383 29.8418V10.1582H16.2266V15.543H23.7734V10.1582H27.7617V29.8418H23.7734V24.457H16.2266V29.8418H12.2383ZM16.2266 20.4688H23.7734V18.1719H16.2266V20.4688Z" fill="hsl(var(--primary-foreground))"/>
+      <circle cx="20" cy="20" r="20" fill="hsl(var(--primary))"/>
+      <g transform="translate(8, 8)">
+        <path d="M10 5.5c-1.3 2.1-1.3 5.1 0 6.5h4c1.3-1.8 1.3-4.1 0-6.5-1.4-1.9-3-1.9-4 0Z" stroke="hsl(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="m14 12-2 3-2-3" stroke="hsl(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9.5 5.5 8 7c-.8.8-1 2-1 3v2c0 1 .2 2 1 3l1.5 1.5" stroke="hsl(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14.5 5.5 16 7c.8.8 1 2 1 3v2c0 1-.2 2-1 3l-1.5 1.5" stroke="hsl(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M2 13.7V17c0 1.7 1.3 3 3 3h14c1.7 0 3-1.3 3-3v-3.3" stroke="hsl(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M10 17v2" stroke="hsl(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14 17v2" stroke="hsl(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M7 20v1.5c0 1.4 1.1 2.5 2.5 2.5h5c1.4 0 2.5-1.1 2.5-2.5V20" stroke="hsl(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M16 4.5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2" stroke="hsl(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </g>
     </svg>
   );
 }

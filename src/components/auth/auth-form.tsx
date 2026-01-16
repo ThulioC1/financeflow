@@ -40,6 +40,36 @@ const loginSchema = z.object({
   password: z.string().min(6, { message: 'A senha deve ter pelo menos 6 caracteres.' }),
 });
 
+const getAuthErrorMessage = (error: any): string => {
+  if (typeof error === 'object' && error !== null && error.code) {
+    switch (error.code) {
+      case 'auth/invalid-email':
+        return 'E-mail inválido.';
+      case 'auth/user-disabled':
+        return 'Este usuário foi desabilitado.';
+      case 'auth/user-not-found':
+        return 'Credenciais inválidas. Verifique seu e-mail e senha.';
+      case 'auth/wrong-password':
+        return 'Credenciais inválidas. Verifique seu e-mail e senha.';
+      case 'auth/email-already-in-use':
+        return 'Este e-mail já está em uso por outra conta.';
+      case 'auth/weak-password':
+        return 'A senha é muito fraca. Use pelo menos 6 caracteres.';
+      case 'auth/operation-not-allowed':
+        return 'Operação não permitida. Contate o suporte.';
+      case 'auth/invalid-api-key':
+      case 'auth/api-key-not-valid':
+        return 'Chave de API do Firebase inválida. A configuração do app está incorreta.';
+      case 'auth/network-request-failed':
+        return 'Erro de rede. Verifique sua conexão com a internet.';
+      default:
+        return error.message || 'Ocorreu um erro inesperado. Tente novamente mais tarde.';
+    }
+  }
+  return 'Ocorreu um erro inesperado. Tente novamente mais tarde.';
+};
+
+
 export function AuthForm() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -76,7 +106,7 @@ export function AuthForm() {
     } catch (error: any) {
       toast({
         title: 'Erro no login com Google',
-        description: error.message,
+        description: getAuthErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -93,7 +123,7 @@ export function AuthForm() {
     } catch (error: any) {
       toast({
         title: 'Erro no Login',
-        description: 'Credenciais inválidas. Tente novamente.',
+        description: getAuthErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -119,9 +149,7 @@ export function AuthForm() {
     } catch (error: any) {
        toast({
         title: 'Erro ao criar conta',
-        description: error.code === 'auth/email-already-in-use' 
-          ? 'Este e-mail já está em uso.'
-          : error.message,
+        description: getAuthErrorMessage(error),
         variant: 'destructive',
       });
     } finally {

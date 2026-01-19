@@ -189,7 +189,7 @@ export default function DespesasPage() {
               <h1 className="text-3xl font-bold font-headline">Despesas</h1>
               <p className="text-muted-foreground">Controle seus gastos mensais.</p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <div className="grid w-full gap-2 sm:flex sm:w-auto">
               <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
                   <SelectTrigger className="w-full sm:w-[200px]">
                       <SelectValue placeholder="Selecione um mês" />

@@ -184,31 +184,31 @@ export default function DespesasPage() {
     </AlertDialog>
 
     <div className="space-y-6">
-       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <h1 className="text-3xl font-bold font-headline">Despesas</h1>
-            <p className="text-muted-foreground">Controle seus gastos mensais.</p>
-        </div>
-        <div className="flex items-center gap-2">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="Selecione um mês" />
-                </SelectTrigger>
-                <SelectContent>
-                    {availableMonths.map(month => (
-                        <SelectItem key={month} value={month}>
-                            {formatMonth(month)}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-            <AddExpenseDialog>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Adicionar Despesa
-                </Button>
-            </AddExpenseDialog>
-        </div>
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+              <h1 className="text-3xl font-bold font-headline">Despesas</h1>
+              <p className="text-muted-foreground">Controle seus gastos mensais.</p>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Selecione um mês" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      {availableMonths.map(month => (
+                          <SelectItem key={month} value={month}>
+                              {formatMonth(month)}
+                          </SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
+              <AddExpenseDialog>
+                  <Button className="w-full sm:w-auto">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Adicionar Despesa
+                  </Button>
+              </AddExpenseDialog>
+          </div>
       </div>
 
       {/* Desktop Table View */}
@@ -340,8 +340,8 @@ export default function DespesasPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="flex items-end justify-between text-sm p-4 pt-0">
-                    <div className="space-y-1.5">
-                        <div className='flex items-center gap-2'>
+                    <div className="space-y-1.5 min-w-0">
+                        <div className='flex items-center gap-2 flex-wrap'>
                           <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'} className='capitalize'>
                             {expense.status}
                           </Badge>
@@ -352,7 +352,7 @@ export default function DespesasPage() {
                           )}
                         </div>
                     </div>
-                    <p className="font-semibold text-base text-right">{formatCurrency(expense.valor)}</p>
+                    <p className="font-semibold text-base text-right pl-2">{formatCurrency(expense.valor)}</p>
                 </CardContent>
             </Card>
            ))

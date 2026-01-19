@@ -249,14 +249,12 @@ export default function ReceitasPage() {
          ) : filteredIncomes.length > 0 ? (
            filteredIncomes.map((income) => (
             <Card key={income.id} className="w-full">
-                <CardHeader className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                         <div className="flex-1 space-y-1 min-w-0">
-                            <CardTitle className='text-base font-semibold capitalize leading-tight truncate'>{income.tipo}</CardTitle>
-                        </div>
+                <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                        <CardTitle className='text-base font-semibold capitalize leading-snug truncate'>{income.tipo}</CardTitle>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
+                                <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0 -mt-1 -mr-2">
                                     <span className="sr-only">Abrir menu</span>
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
@@ -278,21 +276,20 @@ export default function ReceitasPage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                </CardHeader>
-                <CardContent className="flex items-end justify-between text-sm p-4 pt-0">
-                    <div className="space-y-1.5 min-w-0">
+
+                    <div className="flex items-end justify-between text-sm">
                         <div className='flex items-center gap-2 flex-wrap'>
-                          <Badge variant={income.status === 'pago' ? 'success' : 'destructive'} className='capitalize'>
+                            <Badge variant={income.status === 'pago' ? 'success' : 'destructive'} className='capitalize font-medium'>
                             {income.status}
-                          </Badge>
-                          {income.status === 'pago' && (
+                            </Badge>
+                            {income.status === 'pago' && (
                             <span className="text-muted-foreground text-xs">
-                              {formatDate(income.dataRecebimento)}
+                                {formatDate(income.dataRecebimento)}
                             </span>
-                          )}
+                            )}
                         </div>
+                        <p className="font-semibold text-base text-right pl-2">{formatCurrency(income.valor)}</p>
                     </div>
-                    <p className="font-semibold text-base text-right pl-2">{formatCurrency(income.valor)}</p>
                 </CardContent>
             </Card>
            ))

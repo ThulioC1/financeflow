@@ -184,7 +184,7 @@ export default function DespesasPage() {
     </AlertDialog>
 
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
               <h1 className="text-3xl font-bold font-headline">Despesas</h1>
               <p className="text-muted-foreground">Controle seus gastos mensais.</p>
@@ -306,17 +306,17 @@ export default function DespesasPage() {
          ) : filteredAndRecurringExpenses.length > 0 ? (
            filteredAndRecurringExpenses.map((expense) => (
             <Card key={expense.id} className={cn("w-full", expense.isProjected ? "opacity-50" : "")}>
-                <CardHeader className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 space-y-1 min-w-0">
-                            <CardTitle className='text-base font-semibold leading-tight truncate'>{expense.descricao}</CardTitle>
+                <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1 space-y-1.5 min-w-0 pr-2">
+                            <CardTitle className='text-base font-semibold leading-snug truncate'>{expense.descricao}</CardTitle>
                             <CardDescription>
-                                <Badge variant="outline" className='text-xs'>{expense.categoria}</Badge>
+                                <Badge variant="outline" className='text-xs font-normal'>{expense.categoria}</Badge>
                             </CardDescription>
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild disabled={expense.isProjected}>
-                                <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0" disabled={expense.isProjected}>
+                                <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0 -mt-1 -mr-2" disabled={expense.isProjected}>
                                     <span className="sr-only">Abrir menu</span>
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
@@ -338,21 +338,20 @@ export default function DespesasPage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                </CardHeader>
-                <CardContent className="flex items-end justify-between text-sm p-4 pt-0">
-                    <div className="space-y-1.5 min-w-0">
-                        <div className='flex items-center gap-2 flex-wrap'>
-                          <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'} className='capitalize'>
-                            {expense.status}
-                          </Badge>
-                          {expense.status === 'pago' && (
-                            <span className="text-muted-foreground text-xs">
-                              {formatDate(expense.dataPagamento)}
-                            </span>
-                          )}
+
+                    <div className="flex items-end justify-between text-sm">
+                         <div className='flex items-center gap-2 flex-wrap'>
+                            <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'} className='capitalize font-medium'>
+                                {expense.status}
+                            </Badge>
+                            {expense.status === 'pago' && (
+                                <span className="text-muted-foreground text-xs">
+                                    {formatDate(expense.dataPagamento)}
+                                </span>
+                            )}
                         </div>
+                        <p className="font-semibold text-base text-right pl-2">{formatCurrency(expense.valor)}</p>
                     </div>
-                    <p className="font-semibold text-base text-right pl-2">{formatCurrency(expense.valor)}</p>
                 </CardContent>
             </Card>
            ))

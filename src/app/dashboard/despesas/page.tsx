@@ -4,14 +4,6 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -45,7 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AddExpenseDialog } from "@/components/dashboard/add-expense-dialog";
 import { EditExpenseDialog } from "@/components/dashboard/edit-expense-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (value: number) => {
@@ -184,121 +176,41 @@ export default function DespesasPage() {
     </AlertDialog>
 
     <div className="space-y-6">
-       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-              <h1 className="text-3xl font-bold font-headline">Despesas</h1>
-              <p className="text-muted-foreground">Controle seus gastos mensais.</p>
-          </div>
-          <div className="grid w-full gap-2 sm:flex sm:w-auto">
-              <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue placeholder="Selecione um mês" />
-                  </SelectTrigger>
-                  <SelectContent>
-                      {availableMonths.map(month => (
-                          <SelectItem key={month} value={month}>
-                              {formatMonth(month)}
-                          </SelectItem>
-                      ))}
-                  </SelectContent>
-              </Select>
-              <AddExpenseDialog>
-                  <Button className="w-full sm:w-auto">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Adicionar Despesa
-                  </Button>
-              </AddExpenseDialog>
-          </div>
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-3xl font-bold font-headline">Despesas</h1>
+          <p className="text-muted-foreground">Controle seus gastos mensais.</p>
+        </div>
+        <div className="grid w-full gap-2 sm:flex sm:w-auto">
+          <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Selecione um mês" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableMonths.map(month => (
+                <SelectItem key={month} value={month}>
+                  {formatMonth(month)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <AddExpenseDialog>
+            <Button className="w-full sm:w-auto">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Adicionar Despesa
+            </Button>
+          </AddExpenseDialog>
+        </div>
       </div>
-
-      {/* Desktop Table View */}
-      <div className="hidden rounded-lg border shadow-sm md:block">
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Data Pagamento</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead className="w-[80px] text-right">Ações</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {isLoading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                        <TableRow key={i}>
-                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                            <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
-                             <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
-                        </TableRow>
-                    ))
-                ) : filteredAndRecurringExpenses.length > 0 ? (
-                    filteredAndRecurringExpenses.map((expense) => (
-                        <TableRow key={expense.id} className={expense.isProjected ? "opacity-50" : ""}>
-                            <TableCell className="font-medium">{expense.descricao}</TableCell>
-                            <TableCell>
-                                <Badge variant="outline">{expense.categoria}</Badge>
-                            </TableCell>
-                            <TableCell>
-                                <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'}>
-                                    {expense.status}
-                                </Badge>
-                            </TableCell>
-                            <TableCell>{formatDate(expense.dataPagamento)}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(expense.valor)}</TableCell>
-                             <TableCell className="text-right">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild disabled={expense.isProjected}>
-                                        <Button variant="ghost" className="h-8 w-8 p-0" disabled={expense.isProjected}>
-                                            <span className="sr-only">Abrir menu</span>
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                        <DropdownMenuItem onClick={() => setEditingExpense(expense)}>
-                                            <Edit className="mr-2 h-4 w-4" />
-                                            Editar
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                            className="text-red-600 focus:text-red-500 focus:bg-red-50"
-                                            onClick={() => setDeletingExpenseId(expense.id)}
-                                        >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Excluir
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </TableCell>
-                        </TableRow>
-                    ))
-                ) : (
-                    <TableRow>
-                        <TableCell colSpan={6} className="text-center h-24">
-                            Nenhuma despesa encontrada para este mês.
-                        </TableCell>
-                    </TableRow>
-                )}
-            </TableBody>
-        </Table>
-      </div>
-
-       {/* Mobile Card View */}
-       <div className="grid gap-4 md:hidden">
+      
+      <div className="space-y-4">
          {isLoading ? (
            Array.from({ length: 5 }).map((_, i) => (
              <Card key={i}>
-               <CardHeader>
+               <CardContent className="p-4 space-y-3">
                  <Skeleton className="h-6 w-3/4" />
                  <Skeleton className="h-5 w-1/4 mt-1" />
-               </CardHeader>
-               <CardContent className="flex justify-between items-center pt-2">
-                 <Skeleton className="h-6 w-1/3" />
+                 <Skeleton className="h-5 w-1/3" />
                  <Skeleton className="h-5 w-1/4" />
                </CardContent>
              </Card>
@@ -306,59 +218,60 @@ export default function DespesasPage() {
          ) : filteredAndRecurringExpenses.length > 0 ? (
            filteredAndRecurringExpenses.map((expense) => (
             <Card key={expense.id} className={cn("w-full", expense.isProjected ? "opacity-50" : "")}>
-                <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                        <div className="flex-1 space-y-1.5 min-w-0 pr-2">
-                            <CardTitle className='text-base font-semibold leading-snug truncate'>{expense.descricao}</CardTitle>
-                            <CardDescription>
-                                <Badge variant="outline" className='text-xs font-normal'>{expense.categoria}</Badge>
-                            </CardDescription>
-                        </div>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild disabled={expense.isProjected}>
-                                <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0 -mt-1 -mr-2" disabled={expense.isProjected}>
-                                    <span className="sr-only">Abrir menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => setEditingExpense(expense)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    className="text-red-600 focus:text-red-500 focus:bg-red-50"
-                                    onClick={() => setDeletingExpenseId(expense.id)}
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Excluir
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-lg font-bold pr-2">{expense.descricao}</h3>
+                  <DropdownMenu>
+                      <DropdownMenuTrigger asChild disabled={expense.isProjected}>
+                          <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0" disabled={expense.isProjected}>
+                              <span className="sr-only">Abrir menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => setEditingExpense(expense)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                              className="text-red-600 focus:text-red-500 focus:bg-red-50"
+                              onClick={() => setDeletingExpenseId(expense.id)}
+                          >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                          </DropdownMenuItem>
+                      </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Categoria:</span>
+                        <Badge variant="outline">{expense.categoria}</Badge>
                     </div>
-
-                    <div className="flex items-end justify-between text-sm">
-                         <div className='flex items-center gap-2 flex-wrap'>
-                            <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'} className='capitalize font-medium'>
-                                {expense.status}
-                            </Badge>
-                            {expense.status === 'pago' && (
-                                <span className="text-muted-foreground text-xs">
-                                    {formatDate(expense.dataPagamento)}
-                                </span>
-                            )}
-                        </div>
-                        <p className="font-semibold text-base text-right pl-2">{formatCurrency(expense.valor)}</p>
+                     <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Valor:</span>
+                        <span className="font-semibold text-base">{formatCurrency(expense.valor)}</span>
                     </div>
-                </CardContent>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Status:</span>
+                        <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'}>
+                            {expense.status}
+                        </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Data de Pagamento:</span>
+                        <span>{formatDate(expense.dataPagamento)}</span>
+                    </div>
+                </div>
+              </CardContent>
             </Card>
            ))
          ) : (
            <Card>
              <CardContent className="flex h-24 items-center justify-center text-center text-muted-foreground">
-               <p>Nenhuma despesa para este mês.</p>
+               <p>Nenhuma despesa encontrada para este mês.</p>
              </CardContent>
            </Card>
          )}

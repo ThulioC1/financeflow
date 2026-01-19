@@ -129,9 +129,9 @@ export default function ReceitasPage() {
           <h1 className="text-3xl font-bold font-headline">Receitas</h1>
           <p className="text-muted-foreground">Gerencie suas fontes de renda.</p>
         </div>
-        <div className="grid w-full gap-2 sm:flex sm:w-auto">
+        <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-            <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectTrigger className="w-[240px] sm:w-[200px]">
               <SelectValue placeholder="Selecione um mês" />
             </SelectTrigger>
             <SelectContent>
@@ -143,7 +143,7 @@ export default function ReceitasPage() {
             </SelectContent>
           </Select>
           <AddIncomeDialog>
-            <Button className="w-full sm:w-auto">
+            <Button className="w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Adicionar Receita
             </Button>
@@ -165,8 +165,8 @@ export default function ReceitasPage() {
          ) : filteredIncomes.length > 0 ? (
            filteredIncomes.map((income) => (
             <Card key={income.id} className="w-full">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-4">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex justify-between items-start">
                   <h3 className="text-lg font-bold capitalize pr-2">{income.tipo}</h3>
                   <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -192,21 +192,19 @@ export default function ReceitasPage() {
                       </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Valor:</span>
-                    <span className="font-semibold text-base">{formatCurrency(income.valor)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Status:</span>
-                    <Badge variant={income.status === 'pago' ? 'success' : 'destructive'}>
-                        {income.status}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Data de Recebimento:</span>
-                    <span>{formatDate(income.dataRecebimento)}</span>
-                  </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Valor:</span>
+                  <span className="font-semibold text-base">{formatCurrency(income.valor)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Status:</span>
+                  <Badge variant={income.status === 'pago' ? 'success' : 'destructive'}>
+                      {income.status}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Data de Recebimento:</span>
+                  <span>{formatDate(income.dataRecebimento)}</span>
                 </div>
               </CardContent>
             </Card>

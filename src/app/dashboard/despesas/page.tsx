@@ -181,9 +181,9 @@ export default function DespesasPage() {
           <h1 className="text-3xl font-bold font-headline">Despesas</h1>
           <p className="text-muted-foreground">Controle seus gastos mensais.</p>
         </div>
-        <div className="grid w-full gap-2 sm:flex sm:w-auto">
+        <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-            <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectTrigger className="w-[240px] sm:w-[200px]">
               <SelectValue placeholder="Selecione um mês" />
             </SelectTrigger>
             <SelectContent>
@@ -195,7 +195,7 @@ export default function DespesasPage() {
             </SelectContent>
           </Select>
           <AddExpenseDialog>
-            <Button className="w-full sm:w-auto">
+            <Button className="w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Adicionar Despesa
             </Button>
@@ -218,52 +218,50 @@ export default function DespesasPage() {
          ) : filteredAndRecurringExpenses.length > 0 ? (
            filteredAndRecurringExpenses.map((expense) => (
             <Card key={expense.id} className={cn("w-full", expense.isProjected ? "opacity-50" : "")}>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-bold pr-2">{expense.descricao}</h3>
-                  <DropdownMenu>
-                      <DropdownMenuTrigger asChild disabled={expense.isProjected}>
-                          <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0" disabled={expense.isProjected}>
-                              <span className="sr-only">Abrir menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => setEditingExpense(expense)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                              className="text-red-600 focus:text-red-500 focus:bg-red-50"
-                              onClick={() => setDeletingExpenseId(expense.id)}
-                          >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                          </DropdownMenuItem>
-                      </DropdownMenuContent>
-                  </DropdownMenu>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex justify-between items-start">
+                    <h3 className="text-lg font-bold pr-2">{expense.descricao}</h3>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild disabled={expense.isProjected}>
+                            <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0" disabled={expense.isProjected}>
+                                <span className="sr-only">Abrir menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setEditingExpense(expense)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                className="text-red-600 focus:text-red-500 focus:bg-red-50"
+                                onClick={() => setDeletingExpenseId(expense.id)}
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
-                <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Categoria:</span>
-                        <Badge variant="outline">{expense.categoria}</Badge>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Valor:</span>
-                        <span className="font-semibold text-base">{formatCurrency(expense.valor)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Status:</span>
-                        <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'}>
-                            {expense.status}
-                        </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Data de Pagamento:</span>
-                        <span>{formatDate(expense.dataPagamento)}</span>
-                    </div>
+                <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Categoria:</span>
+                    <Badge variant="outline">{expense.categoria}</Badge>
+                </div>
+                 <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Valor:</span>
+                    <span className="font-semibold text-base">{formatCurrency(expense.valor)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'}>
+                        {expense.status}
+                    </Badge>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Data de Pagamento:</span>
+                    <span>{formatDate(expense.dataPagamento)}</span>
                 </div>
               </CardContent>
             </Card>

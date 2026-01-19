@@ -116,7 +116,7 @@ export default function DashboardPage() {
           </div>
           <div className="w-full sm:w-auto">
             <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-              <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectTrigger className="w-[240px] sm:w-[200px]">
                   <SelectValue placeholder="Selecione um mês" />
               </SelectTrigger>
               <SelectContent>

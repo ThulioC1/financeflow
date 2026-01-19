@@ -108,26 +108,24 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="flex-1">
             <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
             <p className="text-muted-foreground">
                 Resumo financeiro para {formatMonth(selectedMonth)}.
             </p>
         </div>
-        <div className="w-full sm:w-auto">
-         <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Selecione um mês" />
-            </SelectTrigger>
-            <SelectContent>
-                {availableMonths.map(month => (
-                    <SelectItem key={month} value={month}>
-                        {formatMonth(month)}
-                    </SelectItem>
-                ))}
-            </SelectContent>
+        <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Selecione um mês" />
+          </SelectTrigger>
+          <SelectContent>
+              {availableMonths.map(month => (
+                  <SelectItem key={month} value={month}>
+                      {formatMonth(month)}
+                  </SelectItem>
+              ))}
+          </SelectContent>
         </Select>
-        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

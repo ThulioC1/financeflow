@@ -306,10 +306,10 @@ export default function DespesasPage() {
          ) : filteredAndRecurringExpenses.length > 0 ? (
            filteredAndRecurringExpenses.map((expense) => (
             <Card key={expense.id} className={cn("w-full", expense.isProjected ? "opacity-50" : "")}>
-                <CardHeader className="p-3">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                            <CardTitle className='text-base leading-none'>{expense.descricao}</CardTitle>
+                <CardHeader className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 space-y-1 min-w-0">
+                            <CardTitle className='text-base font-semibold leading-tight truncate'>{expense.descricao}</CardTitle>
                             <CardDescription>
                                 <Badge variant="outline" className='text-xs'>{expense.categoria}</Badge>
                             </CardDescription>
@@ -339,7 +339,7 @@ export default function DespesasPage() {
                         </DropdownMenu>
                     </div>
                 </CardHeader>
-                <CardContent className="flex items-end justify-between text-sm p-3 pt-0">
+                <CardContent className="flex items-end justify-between text-sm p-4 pt-0">
                     <div className="space-y-1.5">
                         <div className='flex items-center gap-2'>
                           <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'} className='capitalize'>

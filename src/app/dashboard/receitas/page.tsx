@@ -249,9 +249,11 @@ export default function ReceitasPage() {
          ) : filteredIncomes.length > 0 ? (
            filteredIncomes.map((income) => (
             <Card key={income.id} className="w-full">
-                <CardHeader className="p-3">
-                    <div className="flex items-start justify-between gap-4">
-                        <CardTitle className='text-base capitalize leading-none'>{income.tipo}</CardTitle>
+                <CardHeader className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                         <div className="flex-1 space-y-1 min-w-0">
+                            <CardTitle className='text-base font-semibold capitalize leading-tight'>{income.tipo}</CardTitle>
+                        </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
@@ -277,7 +279,7 @@ export default function ReceitasPage() {
                         </DropdownMenu>
                     </div>
                 </CardHeader>
-                <CardContent className="flex items-end justify-between text-sm p-3 pt-0">
+                <CardContent className="flex items-end justify-between text-sm p-4 pt-0">
                     <div className="space-y-1.5">
                         <div className='flex items-center gap-2'>
                           <Badge variant={income.status === 'pago' ? 'success' : 'destructive'} className='capitalize'>

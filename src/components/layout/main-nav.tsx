@@ -7,7 +7,7 @@ import {
   Wallet,
   Landmark,
   History,
-  TrendingUp,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -21,6 +21,7 @@ const links = [
   { href: '/dashboard/receitas', label: 'Receitas', icon: Wallet },
   { href: '/dashboard/despesas', label: 'Despesas', icon: Landmark },
   { href: '/dashboard/historico', label: 'Histórico', icon: History },
+  { href: '/dashboard/perfil', label: 'Perfil', icon: User },
 ];
 
 export function MainNav() {

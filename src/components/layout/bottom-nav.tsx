@@ -7,6 +7,7 @@ import {
   Wallet,
   Landmark,
   History,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +16,7 @@ const links = [
   { href: '/dashboard/receitas', label: 'Receitas', icon: Wallet },
   { href: '/dashboard/despesas', label: 'Despesas', icon: Landmark },
   { href: '/dashboard/historico', label: 'Histórico', icon: History },
+  { href: '/dashboard/perfil', label: 'Perfil', icon: User },
 ];
 
 export function BottomNav() {
@@ -22,7 +24,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-20 border-t bg-background/95 backdrop-blur-sm md:hidden">
-      <div className="grid h-16 grid-cols-4 items-center">
+      <div className="grid h-16 grid-cols-5 items-center">
         {links.map((link) => {
           const isActive = pathname === link.href;
           return (

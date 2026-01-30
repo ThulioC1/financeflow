@@ -4,37 +4,48 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useUser, useAuth, useFirebase, useFirestore } from '@/firebase';
+import { useUser, useAuth, useFirestore } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Camera } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc } from 'firebase/firestore';
+import { Separator } from '@/components/ui/separator';
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: 'O nome deve ter pelo menos 2 caracteres.' }),
 });
 
+const photoSchema = z.object({
+    photoURL: z.string().url({ message: "Por favor, insira uma URL válida." }).or(z.literal('')),
+});
+
+
 export default function PerfilPage() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
-  const { firebaseApp } = useFirebase();
   const db = useFirestore();
   const { toast } = useToast();
 
   const [loadingName, setLoadingName] = useState(false);
   const [loadingPhoto, setLoadingPhoto] = useState(false);
 
-  const form = useForm<z.infer<typeof profileSchema>>({
+  const nameForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     values: {
       name: user?.displayName || '',
     },
+  });
+
+  const photoForm = useForm<z.infer<typeof photoSchema>>({
+    resolver: zodResolver(photoSchema),
+    values: {
+      photoURL: user?.photoURL || '',
+    }
   });
 
   const getInitials = (name?: string | null) => {
@@ -73,26 +84,13 @@ export default function PerfilPage() {
     }
   };
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) {
-      return;
-    }
-    const file = event.target.files[0];
+  const onPhotoSubmit = async (values: z.infer<typeof photoSchema>) => {
     if (!user || !auth.currentUser) return;
 
     setLoadingPhoto(true);
 
     try {
-      const storage = getStorage(firebaseApp);
-      const storageRef = ref(storage, `profile-pictures/${user.uid}`);
-
-      // Upload file
-      const snapshot = await uploadBytes(storageRef, file);
-      // Get download URL
-      const photoURL = await getDownloadURL(snapshot.ref);
-
-      // Update Firebase Auth profile
-      await updateProfile(auth.currentUser, { photoURL });
+      await updateProfile(auth.currentUser, { photoURL: values.photoURL || null });
       
       toast({
         title: 'Sucesso!',
@@ -118,67 +116,73 @@ export default function PerfilPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold font-headline">Meu Perfil</h1>
-        <p className="text-muted-foreground">Gerencie suas informações pessoais.</p>
+        <p className="text-muted-foreground">Gerencie suas informações pessoais e foto.</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Foto de Perfil</CardTitle>
-          <CardDescription>Atualize sua foto de perfil.</CardDescription>
+            <CardTitle>Informações da Conta</CardTitle>
+            <CardDescription>Atualize seus dados e foto de perfil.</CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center gap-6">
-          <div className="relative">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={user?.photoURL ?? ''} alt={user?.displayName ?? 'User'} />
-              <AvatarFallback className="text-3xl">{getInitials(user?.displayName)}</AvatarFallback>
-            </Avatar>
-            <Button
-              asChild
-              variant="outline"
-              size="icon"
-              className="absolute bottom-0 right-0 rounded-full h-8 w-8"
-            >
-              <label htmlFor="photo-upload">
-                {loadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                <span className="sr-only">Trocar foto</span>
-                <input id="photo-upload" type="file" accept="image/*" className="sr-only" onChange={handlePhotoUpload} disabled={loadingPhoto}/>
-              </label>
-            </Button>
-          </div>
-          <div>
-            <p className="text-lg font-semibold">{user?.displayName}</p>
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
-          </div>
-        </CardContent>
-      </Card>
+        <CardContent className="space-y-8">
+            <div className="flex flex-col items-center gap-4">
+                <Avatar className="h-24 w-24">
+                    <AvatarImage src={user?.photoURL ?? ''} alt={user?.displayName ?? 'User'} />
+                    <AvatarFallback className="text-3xl">{getInitials(user?.displayName)}</AvatarFallback>
+                </Avatar>
+                <div className='text-center'>
+                    <p className="text-lg font-semibold">{user?.displayName}</p>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
+                </div>
+            </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações Pessoais</CardTitle>
-          <CardDescription>Atualize seu nome.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onNameSubmit)} className="space-y-4 max-w-sm">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Seu nome completo" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={loadingName}>
-                {loadingName && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Nome
-              </Button>
-            </form>
-          </Form>
+            <Separator />
+
+            <Form {...photoForm}>
+                <form onSubmit={photoForm.handleSubmit(onPhotoSubmit)} className="space-y-4 max-w-sm mx-auto">
+                <FormField
+                    control={photoForm.control}
+                    name="photoURL"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>URL da Foto de Perfil</FormLabel>
+                        <FormControl>
+                        <Input placeholder="https://exemplo.com/sua-foto.jpg" {...field} value={field.value ?? ''} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <Button type="submit" disabled={loadingPhoto}>
+                    {loadingPhoto && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvar Foto
+                </Button>
+                </form>
+            </Form>
+
+            <Separator />
+
+            <Form {...nameForm}>
+                <form onSubmit={nameForm.handleSubmit(onNameSubmit)} className="space-y-4 max-w-sm mx-auto">
+                    <FormField
+                    control={nameForm.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Nome</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Seu nome completo" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <Button type="submit" disabled={loadingName}>
+                    {loadingName && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvar Nome
+                    </Button>
+                </form>
+            </Form>
         </CardContent>
       </Card>
     </div>

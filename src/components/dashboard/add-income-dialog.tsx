@@ -39,7 +39,7 @@ import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
 
 const incomeSchema = z.object({
-  tipo: z.enum(['quinzena 1', 'quinzena 2', 'extra'], {required_error: "Selecione um tipo."}),
+  tipo: z.enum(['mensal', 'quinzena 1', 'quinzena 2', 'extra'], {required_error: "Selecione um tipo."}),
   valor: z.coerce.number().positive({ message: 'Valor deve ser positivo.' }),
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
   status: z.enum(['pago', 'pendente']).default('pendente'),
@@ -144,6 +144,7 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                                <SelectItem value="mensal">Mensal</SelectItem>
                                 <SelectItem value="quinzena 1">Quinzena 1</SelectItem>
                                 <SelectItem value="quinzena 2">Quinzena 2</SelectItem>
                                 <SelectItem value="extra">Extra</SelectItem>

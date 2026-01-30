@@ -7,7 +7,7 @@ export interface UserProfile {
   createdAt: Timestamp;
 }
 
-export type IncomeType = 'quinzena 1' | 'quinzena 2' | 'extra';
+export type IncomeType = 'mensal' | 'quinzena 1' | 'quinzena 2' | 'extra';
 export type EntryStatus = 'pendente' | 'pago';
 
 export interface Income {

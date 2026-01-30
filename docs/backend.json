@@ -53,7 +53,13 @@
         },
         "tipo": {
           "type": "string",
-          "description": "O tipo de receita (e.g., quinzena 1, quinzena 2, extra)."
+          "description": "O tipo de receita (e.g., mensal, quinzena 1, quinzena 2, extra).",
+          "enum": [
+            "mensal",
+            "quinzena 1",
+            "quinzena 2",
+            "extra"
+          ]
         },
         "mesReferencia": {
           "type": "string",

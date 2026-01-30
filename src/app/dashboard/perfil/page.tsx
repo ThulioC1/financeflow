@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
@@ -153,10 +153,18 @@ export default function PerfilPage() {
                     </FormItem>
                     )}
                 />
-                <Button type="submit" disabled={loadingPhoto}>
-                    {loadingPhoto && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Salvar Foto
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button type="submit" disabled={loadingPhoto}>
+                        {loadingPhoto && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Salvar Foto
+                    </Button>
+                    <Button type="button" asChild variant="outline">
+                        <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer">
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upar Foto
+                        </a>
+                    </Button>
+                </div>
                 </form>
             </Form>
 

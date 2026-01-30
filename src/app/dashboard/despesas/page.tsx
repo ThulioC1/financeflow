@@ -58,6 +58,7 @@ const formatDate = (date: Timestamp | undefined) => {
 
 export default function DespesasPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
+  const [sortBy, setSortBy] = useState<'status' | 'dataPagamento' | 'createdAt'>('status');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
 
@@ -135,13 +136,35 @@ export default function DespesasPage() {
         }
     });
 
-    return [...expensesForSelectedMonth, ...projectedExpenses].sort((a, b) => {
-      if (a.status === b.status) {
-        return a.descricao.localeCompare(b.descricao);
+    const combinedExpenses = [...expensesForSelectedMonth, ...projectedExpenses]
+    
+    combinedExpenses.sort((a, b) => {
+      switch(sortBy) {
+          case 'dataPagamento': {
+              const timeA = a.dataPagamento ? a.dataPagamento.toMillis() : 0;
+              const timeB = b.dataPagamento ? b.dataPagamento.toMillis() : 0;
+              if (timeA === 0 && timeB === 0) return a.descricao.localeCompare(b.descricao);
+              if (timeA === 0) return 1;
+              if (timeB === 0) return -1;
+              return timeB - timeA; // most recent first
+          }
+          case 'createdAt': {
+              const timeA = a.createdAt?.toMillis() || 0;
+              const timeB = b.createdAt?.toMillis() || 0;
+              return timeB - timeA; // newest first
+          }
+          case 'status':
+          default: {
+              if (a.status === b.status) {
+                  return a.descricao.localeCompare(b.descricao);
+              }
+              return a.status === 'pendente' ? -1 : 1;
+          }
       }
-      return a.status === 'pendente' ? -1 : 1;
     });
-  }, [allExpenses, selectedMonth]);
+
+    return combinedExpenses;
+  }, [allExpenses, selectedMonth, sortBy]);
 
   const handleDeleteConfirm = () => {
     if (!user || !deletingExpenseId) return;
@@ -186,25 +209,35 @@ export default function DespesasPage() {
           <h1 className="text-3xl font-bold font-headline">Despesas</h1>
           <p className="text-muted-foreground">Controle seus gastos mensais.</p>
         </div>
-        <div className="grid w-full gap-2 sm:w-auto sm:flex">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="Selecione um mês" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableMonths.map(month => (
-                <SelectItem key={month} value={month}>
-                  {formatMonth(month)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <AddExpenseDialog>
-            <Button className="w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Adicionar Despesa
-            </Button>
-          </AddExpenseDialog>
+        <div className="grid w-full grid-cols-1 items-start gap-2 sm:w-auto sm:flex-row sm:items-center md:flex">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Selecione um mês" />
+                </SelectTrigger>
+                <SelectContent>
+                {availableMonths.map(month => (
+                    <SelectItem key={month} value={month}>
+                    {formatMonth(month)}
+                    </SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="status">Status</SelectItem>
+                    <SelectItem value="dataPagamento">Data de Pagamento</SelectItem>
+                    <SelectItem value="createdAt">Data de Adição</SelectItem>
+                </SelectContent>
+            </Select>
+            <AddExpenseDialog>
+                <Button className="w-full sm:w-auto">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Adicionar Despesa
+                </Button>
+            </AddExpenseDialog>
         </div>
       </header>
       
@@ -283,3 +316,5 @@ export default function DespesasPage() {
     </>
   );
 }
+
+    

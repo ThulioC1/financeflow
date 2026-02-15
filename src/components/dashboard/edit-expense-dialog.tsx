@@ -32,7 +32,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, Timestamp, updateDoc } from 'firebase/firestore';
+import { doc, Timestamp, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import type { Expense } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -48,6 +48,7 @@ const expenseSchema = z.object({
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
   status: z.enum(['pago', 'pendente']).default('pendente'),
   dataPagamento: z.coerce.date().optional().nullable(),
+  dataVencimento: z.coerce.date().optional().nullable(),
 });
 
 const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Outros'];
@@ -72,9 +73,8 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
     if (expense) {
       form.reset({
         ...expense,
-        dataPagamento: expense.dataPagamento && typeof expense.dataPagamento.toDate === 'function' 
-            ? expense.dataPagamento.toDate() 
-            : null,
+        dataPagamento: expense.dataPagamento?.toDate(),
+        dataVencimento: expense.dataVencimento?.toDate(),
       });
     }
   }, [expense, form, open]);
@@ -98,32 +98,57 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
     }
     setLoading(true);
 
-    const expenseDocRef = doc(db, 'users', user.uid, 'expenses', expense.id);
-    const dataToUpdate = {
-      ...values,
-      dataPagamento: values.dataPagamento ? Timestamp.fromDate(values.dataPagamento) : null,
+    const dataPayload = {
+        ...values,
+        dataPagamento: values.dataPagamento ? Timestamp.fromDate(values.dataPagamento) : null,
+        dataVencimento: values.dataVencimento ? Timestamp.fromDate(values.dataVencimento) : null,
     };
 
-    updateDoc(expenseDocRef, dataToUpdate as any)
-      .then(() => {
-        toast({
-          title: 'Sucesso!',
-          description: 'Despesa atualizada.',
+    let operationPromise;
+
+    if (expense.isProjected) {
+        // This is a projected expense, so we need to create a new document
+        const newId = crypto.randomUUID();
+        const dataToCreate = {
+            ...dataPayload,
+            id: newId,
+            userId: user.uid,
+            createdAt: serverTimestamp(),
+            recorrente: expense.recorrente,
+        };
+        const newExpenseRef = doc(db, 'users', user.uid, 'expenses', newId);
+        operationPromise = setDoc(newExpenseRef, dataToCreate);
+    } else {
+        // This is a regular expense, so we update it
+        const expenseDocRef = doc(db, 'users', user.uid, 'expenses', expense.id);
+        operationPromise = updateDoc(expenseDocRef, dataPayload as any);
+    }
+
+    operationPromise
+        .then(() => {
+            toast({
+            title: 'Sucesso!',
+            description: `Despesa ${expense.isProjected ? 'criada' : 'atualizada'}.`,
+            });
+            onOpenChange(false);
+        })
+        .catch((serverError) => {
+            console.error("Error saving expense: ", serverError);
+            toast({ title: 'Erro', description: 'Não foi possível salvar a despesa.', variant: 'destructive' });
+            
+            const docRef = expense.isProjected 
+              ? doc(db, 'users', user.uid, 'expenses', 'new-id-placeholder') // Path for error reporting
+              : doc(db, 'users', user.uid, 'expenses', expense.id);
+
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: docRef.path,
+                operation: expense.isProjected ? 'create' : 'update',
+                requestResourceData: dataPayload
+            }));
+        })
+        .finally(() => {
+            setLoading(false);
         });
-        onOpenChange(false);
-      })
-      .catch((serverError) => {
-        console.error("Error updating expense: ", serverError);
-        toast({ title: 'Erro', description: 'Não foi possível atualizar a despesa.', variant: 'destructive' });
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: expenseDocRef.path,
-          operation: 'update',
-          requestResourceData: dataToUpdate
-        }));
-      })
-      .finally(() => {
-        setLoading(false);
-      });
   };
 
   return (
@@ -186,19 +211,39 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
                       )}
                       />
               </div>
-              <FormField
-                  control={form.control}
-                  name="mesReferencia"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>Mês de Referência</FormLabel>
-                      <FormControl>
-                          <Input type="month" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="mesReferencia"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Mês de Referência</FormLabel>
+                        <FormControl>
+                            <Input type="month" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                <FormField
+                    control={form.control}
+                    name="dataVencimento"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Data de Vencimento</FormLabel>
+                        <FormControl>
+                            <Input 
+                                type="date" 
+                                {...field}
+                                value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                                onChange={(e) => field.onChange(e.target.valueAsDate)}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
                <div className="flex items-center space-x-4">
                     <FormField
                         control={form.control}

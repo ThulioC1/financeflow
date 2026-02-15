@@ -46,6 +46,7 @@ const expenseSchema = z.object({
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
   status: z.enum(['pago', 'pendente']).default('pendente'),
   dataPagamento: z.coerce.date().optional().nullable(),
+  dataVencimento: z.coerce.date().optional().nullable(),
 });
 
 const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Outros'];
@@ -67,6 +68,7 @@ export function AddExpenseDialog({ children }: { children: React.ReactNode }) {
       mesReferencia: new Date().toISOString().slice(0, 7),
       status: 'pendente',
       dataPagamento: null,
+      dataVencimento: null,
     },
   });
 
@@ -99,6 +101,7 @@ export function AddExpenseDialog({ children }: { children: React.ReactNode }) {
         userId: user.uid,
         createdAt: serverTimestamp(),
         dataPagamento: values.dataPagamento ? Timestamp.fromDate(values.dataPagamento) : null,
+        dataVencimento: values.dataVencimento ? Timestamp.fromDate(values.dataVencimento) : null,
       };
       
       const expenseDocRef = doc(db, 'users', user.uid, 'expenses', newId);
@@ -128,7 +131,8 @@ export function AddExpenseDialog({ children }: { children: React.ReactNode }) {
               recorrente: false,
               mesReferencia: new Date().toISOString().slice(0, 7),
               status: 'pendente',
-              dataPagamento: null
+              dataPagamento: null,
+              dataVencimento: null,
             });
         }
         setOpen(isOpen);
@@ -191,19 +195,39 @@ export function AddExpenseDialog({ children }: { children: React.ReactNode }) {
                     )}
                     />
             </div>
-            <FormField
-                control={form.control}
-                name="mesReferencia"
-                render={({ field }) => (
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="mesReferencia"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Mês de Referência</FormLabel>
+                        <FormControl>
+                            <Input type="month" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                 <FormField
+                    control={form.control}
+                    name="dataVencimento"
+                    render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Mês de Referência</FormLabel>
-                    <FormControl>
-                        <Input type="month" {...field} />
-                    </FormControl>
-                    <FormMessage />
+                        <FormLabel>Data de Vencimento</FormLabel>
+                        <FormControl>
+                            <Input 
+                                type="date" 
+                                {...field}
+                                value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                                onChange={(e) => field.onChange(e.target.valueAsDate)}
+                            />
+                        </FormControl>
+                        <FormMessage />
                     </FormItem>
-                )}
+                    )}
                 />
+            </div>
             <div className="flex items-center space-x-4">
                 <FormField
                     control={form.control}

@@ -131,6 +131,7 @@ export default function DespesasPage() {
                 mesReferencia: selectedMonth,
                 status: 'pendente',
                 dataPagamento: undefined,
+                dataVencimento: template.dataVencimento,
                 isProjected: true, // Flag to identify projected expenses
             });
         }
@@ -260,8 +261,8 @@ export default function DespesasPage() {
                 <div className="flex justify-between items-start">
                     <h3 className="text-lg font-bold pr-2">{expense.descricao}</h3>
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild disabled={expense.isProjected}>
-                            <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0" disabled={expense.isProjected}>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
                                 <span className="sr-only">Abrir menu</span>
                                 <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -276,6 +277,7 @@ export default function DespesasPage() {
                             <DropdownMenuItem
                                 className="text-red-600 focus:text-red-500 focus:bg-red-50"
                                 onClick={() => setDeletingExpenseId(expense.id)}
+                                disabled={expense.isProjected}
                             >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Excluir
@@ -296,6 +298,10 @@ export default function DespesasPage() {
                     <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'}>
                         {expense.status}
                     </Badge>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Vencimento:</span>
+                    <span>{formatDate(expense.dataVencimento)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Data de Pagamento:</span>

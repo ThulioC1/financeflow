@@ -134,6 +134,11 @@
           "description": "A data em que a despesa foi paga.",
           "format": "date-time"
         },
+        "dataVencimento": {
+          "type": "string",
+          "description": "A data de vencimento da despesa.",
+          "format": "date-time"
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicando quando a entrada de despesa foi criada.",

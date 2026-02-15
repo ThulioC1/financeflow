@@ -32,6 +32,7 @@ export interface Expense {
   status: EntryStatus;
   createdAt: Timestamp;
   dataPagamento?: Timestamp;
+  dataVencimento?: Timestamp;
   isProjected?: boolean;
 }
 

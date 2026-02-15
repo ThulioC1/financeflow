@@ -186,14 +186,18 @@ export default function DespesasPage() {
         const newExpenseRef = doc(db, 'users', user.uid, 'expenses', newId);
         
         const dataToCreate = {
-            ...expense,
+            descricao: expense.descricao,
+            valor: expense.valor,
+            categoria: expense.categoria,
+            recorrente: expense.recorrente,
+            mesReferencia: expense.mesReferencia,
             id: newId,
             userId: user.uid,
-            status: 'pago',
+            status: 'pago' as 'pago',
             dataPagamento: Timestamp.now(),
             createdAt: serverTimestamp(),
+            dataVencimento: expense.dataVencimento || null,
         };
-        delete dataToCreate.isProjected; // a real expense now
 
         setDocumentNonBlocking(newExpenseRef, dataToCreate, {});
 

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, CheckCircle2 } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,8 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from "@/firebase";
-import { collection, doc, Timestamp } from "firebase/firestore";
-import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { collection, doc, Timestamp, serverTimestamp } from "firebase/firestore";
+import { deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { AddExpenseDialog } from "@/components/dashboard/add-expense-dialog";
 import { EditExpenseDialog } from "@/components/dashboard/edit-expense-dialog";
@@ -178,6 +178,40 @@ export default function DespesasPage() {
     setDeletingExpenseId(null);
   };
 
+  const handleMarkAsPaid = (expense: Expense) => {
+    if (!user || !db) return;
+
+    if (expense.isProjected) {
+        const newId = crypto.randomUUID();
+        const newExpenseRef = doc(db, 'users', user.uid, 'expenses', newId);
+        
+        const dataToCreate = {
+            ...expense,
+            id: newId,
+            userId: user.uid,
+            status: 'pago',
+            dataPagamento: Timestamp.now(),
+            createdAt: serverTimestamp(),
+        };
+        delete dataToCreate.isProjected; // a real expense now
+
+        setDocumentNonBlocking(newExpenseRef, dataToCreate, {});
+
+    } else {
+        const expenseRef = doc(db, 'users', user.uid, 'expenses', expense.id);
+        const dataToUpdate = {
+            status: 'pago',
+            dataPagamento: Timestamp.now(),
+        };
+        updateDocumentNonBlocking(expenseRef, dataToUpdate);
+    }
+    
+    toast({
+        title: 'Sucesso!',
+        description: 'Despesa marcada como paga.',
+    });
+  };
+
   return (
     <>
     <EditExpenseDialog
@@ -307,6 +341,14 @@ export default function DespesasPage() {
                     <span className="text-muted-foreground">Data de Pagamento:</span>
                     <span>{formatDate(expense.dataPagamento)}</span>
                 </div>
+                {expense.status === 'pendente' && (
+                    <div className="pt-2">
+                        <Button variant="outline" size="sm" className="w-full" onClick={() => handleMarkAsPaid(expense)}>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Marcar como Pago
+                        </Button>
+                    </div>
+                )}
               </CardContent>
             </Card>
            ))
@@ -322,5 +364,3 @@ export default function DespesasPage() {
     </>
   );
 }
-
-    

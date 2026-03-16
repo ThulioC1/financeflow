@@ -1,3 +1,4 @@
+
 'use client';
 
 import { MainNav } from '@/components/layout/main-nav';
@@ -9,6 +10,7 @@ import { useEffect } from 'react';
 import { SidebarProvider, Sidebar } from '@/components/ui/sidebar';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { SidebarInset } from '@/components/ui/sidebar';
+import { NotificationChecker } from '@/components/dashboard/notification-checker';
 
 export default function DashboardLayout({
   children,
@@ -31,6 +33,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
+      <NotificationChecker />
       <Sidebar collapsible="icon">
           <div className="flex h-full flex-col">
             <div className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border px-4">

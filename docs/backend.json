@@ -218,6 +218,10 @@
         "endDate": { "type": "string", "format": "date-time" },
         "location": { "type": "string" },
         "allDay": { "type": "boolean" },
+        "recurrence": {
+          "type": "string",
+          "enum": ["none", "daily", "weekly", "yearly"]
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userId", "title", "startDate", "endDate", "createdAt"]

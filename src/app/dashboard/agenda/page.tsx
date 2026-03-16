@@ -12,7 +12,10 @@ import {
   isSameMonth, 
   isSameDay, 
   addMonths, 
-  subMonths 
+  subMonths,
+  isAfter,
+  isBefore,
+  startOfDay
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -23,7 +26,8 @@ import {
   Clock,
   MapPin,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Repeat
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -39,6 +43,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   useCollection, 
   useFirestore, 
@@ -58,13 +69,14 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import type { CalendarEvent } from '@/lib/types';
+import type { CalendarEvent, EventRecurrence } from '@/lib/types';
 
 export default function AgendaPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [recurrence, setRecurrence] = useState<EventRecurrence>('none');
 
   const { user } = useUser();
   const db = useFirestore();
@@ -87,9 +99,29 @@ export default function AgendaPage() {
     end: endDate,
   });
 
-  const selectedDayEvents = useMemo(() => {
+  const checkEventOnDay = (event: CalendarEvent, day: Date) => {
+    const eventStart = startOfDay(event.startDate.toDate());
+    const targetDay = startOfDay(day);
+
+    if (isSameDay(eventStart, targetDay)) return true;
+    if (isBefore(targetDay, eventStart)) return false;
+
+    if (event.recurrence === 'daily') return true;
+    if (event.recurrence === 'weekly') return eventStart.getDay() === targetDay.getDay();
+    if (event.recurrence === 'yearly') {
+      return eventStart.getDate() === targetDay.getDate() && eventStart.getMonth() === targetDay.getMonth();
+    }
+
+    return false;
+  };
+
+  const getEventsForDay = (day: Date) => {
     if (!events) return [];
-    return events.filter(event => isSameDay(event.startDate.toDate(), selectedDate));
+    return events.filter(event => checkEventOnDay(event, day));
+  };
+
+  const selectedDayEvents = useMemo(() => {
+    return getEventsForDay(selectedDate);
   }, [events, selectedDate]);
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -129,6 +161,7 @@ export default function AgendaPage() {
       startDate: Timestamp.fromDate(eventStartDate),
       endDate: Timestamp.fromDate(eventEndDate),
       allDay: false,
+      recurrence,
       createdAt: serverTimestamp(),
     };
 
@@ -141,6 +174,7 @@ export default function AgendaPage() {
 
     setIsAddDialogOpen(false);
     setEditingEvent(null);
+    setRecurrence('none');
   };
 
   const handleDeleteEvent = (eventId: string) => {
@@ -174,7 +208,10 @@ export default function AgendaPage() {
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
               setIsAddDialogOpen(open);
-              if (!open) setEditingEvent(null);
+              if (!open) {
+                setEditingEvent(null);
+                setRecurrence('none');
+              }
           }}>
             <DialogTrigger asChild>
               <Button size="sm" className="flex-1 sm:flex-none">
@@ -216,6 +253,20 @@ export default function AgendaPage() {
                         required 
                       />
                     </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="recurrence">Repetir</Label>
+                    <Select value={recurrence} onValueChange={(v: EventRecurrence) => setRecurrence(v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a recorrência" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Não se repete</SelectItem>
+                        <SelectItem value="daily">Diariamente</SelectItem>
+                        <SelectItem value="weekly">Semanalmente</SelectItem>
+                        <SelectItem value="yearly">Anualmente</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="location">Localização</Label>
@@ -267,7 +318,7 @@ export default function AgendaPage() {
             </div>
             <div className="grid grid-cols-7 gap-px bg-muted overflow-hidden">
               {calendarDays.map((day, i) => {
-                const dayEvents = events?.filter(e => isSameDay(e.startDate.toDate(), day)) || [];
+                const dayEvents = getEventsForDay(day);
                 const isSelected = isSameDay(day, selectedDate);
                 const isCurrentMonth = isSameMonth(day, monthStart);
                 const isToday = isSameDay(day, new Date());
@@ -292,9 +343,15 @@ export default function AgendaPage() {
                     <div className="mt-1 space-y-1">
                       {dayEvents.slice(0, 3).map(event => (
                         <div 
-                          key={event.id} 
-                          className="truncate text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 px-1 py-0.5 rounded border border-indigo-200"
+                          key={`${event.id}-${day.getTime()}`} 
+                          className={cn(
+                            "truncate text-[10px] sm:text-xs px-1 py-0.5 rounded border flex items-center gap-1",
+                            event.recurrence && event.recurrence !== 'none' 
+                              ? "bg-amber-100 text-amber-700 border-amber-200"
+                              : "bg-indigo-100 text-indigo-700 border-indigo-200"
+                          )}
                         >
+                          {event.recurrence && event.recurrence !== 'none' && <Repeat className="h-2 w-2" />}
                           {event.title}
                         </div>
                       ))}
@@ -330,11 +387,26 @@ export default function AgendaPage() {
                 <div className="space-y-4">
                   {selectedDayEvents.map(event => (
                     <div 
-                      key={event.id}
+                      key={`${event.id}-${selectedDate.getTime()}`}
                       className="group relative flex flex-col gap-2 p-3 rounded-lg border bg-card transition-all hover:shadow-md"
                     >
                       <div className="flex justify-between items-start">
-                        <h4 className="font-bold text-sm">{event.title}</h4>
+                        <div className="flex flex-col">
+                          <h4 className="font-bold text-sm flex items-center gap-2">
+                            {event.title}
+                            {event.recurrence && event.recurrence !== 'none' && (
+                              <Repeat className="h-3 w-3 text-amber-500" />
+                            )}
+                          </h4>
+                          {event.recurrence && event.recurrence !== 'none' && (
+                            <span className="text-[10px] text-amber-600 font-medium">
+                              Repete: {
+                                event.recurrence === 'daily' ? 'Diariamente' :
+                                event.recurrence === 'weekly' ? 'Semanalmente' : 'Anualmente'
+                              }
+                            </span>
+                          )}
+                        </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button 
                             variant="ghost" 
@@ -342,6 +414,7 @@ export default function AgendaPage() {
                             className="h-7 w-7" 
                             onClick={() => {
                               setEditingEvent(event);
+                              setRecurrence(event.recurrence || 'none');
                               setIsAddDialogOpen(true);
                             }}
                           >

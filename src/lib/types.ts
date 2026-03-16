@@ -47,6 +47,8 @@ export interface Balance {
   saldoFinal: number;
 }
 
+export type EventRecurrence = 'none' | 'daily' | 'weekly' | 'yearly';
+
 export interface CalendarEvent {
   id: string;
   userId: string;
@@ -56,5 +58,6 @@ export interface CalendarEvent {
   startDate: Timestamp;
   endDate: Timestamp;
   allDay: boolean;
+  recurrence?: EventRecurrence;
   createdAt: Timestamp;
 }

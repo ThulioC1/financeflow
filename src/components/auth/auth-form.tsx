@@ -9,6 +9,7 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { useAuth, useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -62,6 +63,8 @@ const getAuthErrorMessage = (error: any): string => {
         return 'Chave de API do Firebase inválida. A configuração do app está incorreta.';
       case 'auth/network-request-failed':
         return 'Erro de rede. Verifique sua conexão com a internet.';
+      case 'auth/too-many-requests':
+        return 'Muitas tentativas. Tente novamente mais tarde.';
       default:
         return error.message || 'Ocorreu um erro inesperado. Tente novamente mais tarde.';
     }
@@ -94,7 +97,6 @@ export function AuthForm() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
-      // Create user profile in Firestore if it's a new user
       const userDocRef = doc(db, 'users', user.uid);
       await setDoc(userDocRef, {
         uid: user.uid,
@@ -159,6 +161,35 @@ export function AuthForm() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const email = loginForm.getValues('email');
+    if (!email || !z.string().email().safeParse(email).success) {
+      toast({
+        title: 'E-mail necessário',
+        description: 'Por favor, insira um e-mail válido no campo de e-mail para recuperar sua senha.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: 'E-mail enviado!',
+        description: 'Verifique sua caixa de entrada (e spam) para redefinir sua senha.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao enviar e-mail',
+        description: getAuthErrorMessage(error),
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Tabs defaultValue="login" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
@@ -192,7 +223,18 @@ export function AuthForm() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Senha</FormLabel>
+                      <FormLabel className="flex justify-between items-center">
+                        Senha
+                        <Button 
+                          variant="link" 
+                          type="button" 
+                          className="h-auto p-0 text-xs"
+                          onClick={handleForgotPassword}
+                          disabled={loading}
+                        >
+                          Esqueceu a senha?
+                        </Button>
+                      </FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="********" {...field} />
                       </FormControl>

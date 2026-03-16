@@ -26,7 +26,9 @@ import {
   Trash2, 
   Repeat, 
   Edit2,
-  Globe
+  Globe,
+  Info,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -70,6 +72,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { CalendarEvent, EventRecurrence } from '@/lib/types';
 import { fetchExternalCalendarEvents, type ExternalEvent } from '@/app/actions/calendar-actions';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ExternalCalendar {
   id: string;
@@ -107,7 +115,6 @@ export default function AgendaPage() {
   const { data: events, isLoading } = useCollection<CalendarEvent>(eventsQuery);
   const { data: externalCalendars, isLoading: isExternalLoading } = useCollection<ExternalCalendar>(externalQuery);
 
-  // Busca eventos das agendas externas quando a lista de URLs muda
   useEffect(() => {
     async function loadExternalEvents() {
       if (!externalCalendars || externalCalendars.length === 0) {
@@ -276,6 +283,10 @@ export default function AgendaPage() {
     toast({ title: "Agenda externa removida" });
   };
 
+  const hasBusyEvents = useMemo(() => {
+    return externalEvents.some(e => e.title.toLowerCase() === 'busy' || e.title.toLowerCase() === 'ocupado');
+  }, [externalEvents]);
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -388,7 +399,6 @@ export default function AgendaPage() {
                 </div>
               ) : (selectedDayEvents.local.length > 0 || selectedDayEvents.external.length > 0) ? (
                 <div className="space-y-4">
-                  {/* Eventos Locais */}
                   {selectedDayEvents.local.map(event => (
                     <div key={`${event.id}-${selectedDate.getTime()}`} className="group relative flex flex-col gap-2 p-3 rounded-lg border bg-card transition-all hover:shadow-md">
                       <div className="flex justify-between items-start">
@@ -408,7 +418,6 @@ export default function AgendaPage() {
                       </div>
                     </div>
                   ))}
-                  {/* Eventos Externos */}
                   {selectedDayEvents.external.map(event => (
                     <div key={`${event.id}-${selectedDate.getTime()}`} className="flex flex-col gap-2 p-3 rounded-lg border bg-emerald-50/50 border-emerald-100">
                       <div className="flex justify-between items-start">
@@ -418,6 +427,18 @@ export default function AgendaPage() {
                           </h4>
                           <span className="text-[10px] text-emerald-600 font-medium">{event.sourceName}</span>
                         </div>
+                        {(event.title.toLowerCase() === 'busy' || event.title.toLowerCase() === 'ocupado') && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertCircle className="h-4 w-4 text-amber-500 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-[200px]">
+                                <p>Este evento está oculto devido às configurações de privacidade da agenda externa. Mude para "Ver todos os detalhes" no Google Calendar.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                       <div className="flex flex-col gap-1 text-xs text-emerald-700/70">
                         <div className="flex items-center gap-2"><Clock className="h-3 w-3" /><span>{format(new Date(event.startDate), 'HH:mm')} - {format(new Date(event.endDate), 'HH:mm')}</span></div>
@@ -442,15 +463,21 @@ export default function AgendaPage() {
                 <DialogTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8"><Plus className="h-4 w-4" /></Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[500px]">
                   <form onSubmit={handleSaveExternal}>
                     <DialogHeader>
                       <DialogTitle>{editingExternal ? 'Editar Agenda' : 'Nova Agenda Externa'}</DialogTitle>
-                      <DialogDescription>Insira o URL público (iCal) da sua agenda do Google.</DialogDescription>
+                      <DialogDescription>Use o <strong>Endereço particular em formato iCal</strong> para ver detalhes de agendas privadas.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2"><Label htmlFor="name">Nome da Agenda</Label><Input id="name" name="name" defaultValue={editingExternal?.name} placeholder="Ex: Feriados ou Trabalho" required /></div>
-                      <div className="grid gap-2"><Label htmlFor="url">URL da Agenda (iCal)</Label><Input id="url" name="url" defaultValue={editingExternal?.url} placeholder="https://calendar.google.com/..." required /></div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="url">URL da Agenda (iCal)</Label>
+                        <Input id="url" name="url" defaultValue={editingExternal?.url} placeholder="https://calendar.google.com/calendar/ical/..." required />
+                        <p className="text-[10px] text-muted-foreground bg-muted p-2 rounded">
+                          <strong>Dica:</strong> No Google Calendar, vá em Configurações da Agenda > Integrar agenda > Copie o <strong>Endereço particular em formato iCal</strong> para evitar que os eventos apareçam apenas como "Ocupado".
+                        </p>
+                      </div>
                     </div>
                     <DialogFooter><Button type="submit">Salvar</Button></DialogFooter>
                   </form>
@@ -458,6 +485,12 @@ export default function AgendaPage() {
               </Dialog>
             </CardHeader>
             <CardContent>
+              {hasBusyEvents && (
+                <div className="mb-4 p-2 text-[10px] bg-amber-50 text-amber-800 border border-amber-200 rounded flex items-start gap-2">
+                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                  <p>Alguns eventos aparecem como "Busy" (Ocupado). Para ver os títulos, use o <strong>Endereço Particular iCal</strong> nas configurações do Google Calendar.</p>
+                </div>
+              )}
               {isExternalLoading ? <Skeleton className="h-12 w-full" /> : externalCalendars && externalCalendars.length > 0 ? (
                 <div className="space-y-3">
                   {externalCalendars.map(cal => (

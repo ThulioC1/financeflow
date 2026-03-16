@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -202,12 +203,31 @@
         "totalDespesas",
         "saldoFinal"
       ]
+    },
+    "CalendarEvent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Evento de Agenda",
+      "type": "object",
+      "description": "Representa um compromisso na agenda do usuário.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "allDay": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "startDate", "endDate", "createdAt"]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {
@@ -219,13 +239,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Armazena informações do perfil do usuário. A propriedade baseada no caminho garante que apenas o usuário possa acessar seu perfil.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "O identificador único do usuário."
-            }
-          ]
+          "description": "Armazena informações do perfil do usuário."
         }
       },
       {
@@ -235,17 +249,7 @@
           "schema": {
             "$ref": "#/backend/entities/Income"
           },
-          "description": "Armazena entradas de receita para um usuário específico. A propriedade baseada no caminho garante que apenas o usuário possa acessar seus dados de receita.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "O identificador único do usuário."
-            },
-            {
-              "name": "incomeId",
-              "description": "O identificador único da entrada de receita."
-            }
-          ]
+          "description": "Armazena entradas de receita."
         }
       },
       {
@@ -255,17 +259,7 @@
           "schema": {
             "$ref": "#/backend/entities/Expense"
           },
-          "description": "Armazena entradas de despesa para um usuário específico. A propriedade baseada no caminho garante que apenas o usuário possa acessar seus dados de despesa.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "O identificador único do usuário."
-            },
-            {
-              "name": "expenseId",
-              "description": "O identificador único da entrada de despesa."
-            }
-          ]
+          "description": "Armazena entradas de despesa."
         }
       },
       {
@@ -275,20 +269,19 @@
           "schema": {
             "$ref": "#/backend/entities/Balance"
           },
-          "description": "Armazena informações de saldo para um usuário específico. A propriedade baseada no caminho garante que apenas o usuário possa acessar seus dados de saldo.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "O identificador único do usuário."
-            },
-            {
-              "name": "balanceId",
-              "description": "O identificador único da entrada de saldo."
-            }
-          ]
+          "description": "Armazena informações de saldo."
+        }
+      },
+      {
+        "path": "/users/{userId}/events/{eventId}",
+        "definition": {
+          "entityName": "CalendarEvent",
+          "schema": {
+            "$ref": "#/backend/entities/CalendarEvent"
+          },
+          "description": "Armazena compromissos da agenda do usuário."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to ensure data isolation between users and efficient querying of financial data. Each user's data (incomes, expenses, and balances) is stored under their respective user ID, enabling secure and straightforward security rules. The path-based ownership pattern (`/users/{userId}/incomes/{incomeId}`, `/users/{userId}/expenses/{expenseId}`, `/users/{userId}/balances/{balanceId}`) guarantees that users can only access their own data, adhering to the application's security requirements.\\n\\n**Authorization Independence:**\\n\\n*   The structure inherently achieves Authorization Independence. Each document (income, expense, balance) is stored within a path specific to a user (`/users/{userId}`). This eliminates the need for `get()` calls in security rules to validate ownership. The security rules can directly verify `request.auth.uid == userId` to grant access, making the authorization process atomic and independent of other documents.\\n\\n**QAPs Support:**\\n\\n*   The structure supports secure `list` operations because each user's data is segregated into its own subcollection. Security rules can allow listing operations based on the `userId` in the path, preventing unauthorized access to other users' data.\\n*   The segregation of data into separate collections (`incomes`, `expenses`, `balances`) also simplifies security rules by ensuring that all documents within a collection share the same security requirements. This avoids the need for complex rule logic based on document content.\\n\\nThis design promotes clarity, security, and scalability, aligning with the application's requirements for a personal finance management system."
+    ]
   }
 }

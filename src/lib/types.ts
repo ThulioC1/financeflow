@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export interface UserProfile {
@@ -44,4 +45,16 @@ export interface Balance {
   totalReceitas: number;
   totalDespesas: number;
   saldoFinal: number;
+}
+
+export interface CalendarEvent {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  location?: string;
+  startDate: Timestamp;
+  endDate: Timestamp;
+  allDay: boolean;
+  createdAt: Timestamp;
 }

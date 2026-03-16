@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -8,6 +9,7 @@ import {
   Landmark,
   History,
   User,
+  CalendarDays,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -18,6 +20,7 @@ import {
 
 const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarDays },
   { href: '/dashboard/receitas', label: 'Receitas', icon: Wallet },
   { href: '/dashboard/despesas', label: 'Despesas', icon: Landmark },
   { href: '/dashboard/historico', label: 'Histórico', icon: History },

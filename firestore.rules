@@ -1,114 +1,36 @@
-/**
- * Core Philosophy: This ruleset enforces a strict user-ownership model. All data is
- * considered private and is only accessible by the user who owns it. This ensures
- * complete data isolation between different users of the application.
- *
- * Data Structure: The data is organized hierarchically, with all user-specific
- * collections (incomes, expenses, balances, events) nested under a top-level `/users/{userId}`
- * document. This path-based ownership is the cornerstone of the security model.
- *
- * Key Security Decisions:
- * - User Enumeration is Disabled: Listing documents from the top-level `/users`
- *   collection is explicitly forbidden to prevent attackers from discovering user IDs.
- * - Strict Ownership: A user can only read or write data located within their own
- *   document tree (i.e., under `/users/{their-own-userId}`).
- * - Relational Integrity: On creation, documents in subcollections must contain a `userId`
- *   field that matches the user ID in the path, ensuring a permanent and correct
- *   link to the owner. This field is enforced as immutable on updates.
- *
- * Denormalization for Authorization: The entire security model relies on path-based
- * ownership. By placing a user's data in a subcollection under their own user document,
- * we avoid slow and costly `get()` calls to other documents to verify ownership.
- * Authorization is determined instantly and efficiently by comparing the authenticated
- * user's ID with the `userId` wildcard in the document path.
- *
- * Structural Segregation: User data is naturally segregated by the `/users/{userId}`
- * path. Furthermore, different types of financial records (incomes, expenses, balances, events)
- * are stored in separate subcollections, allowing for clear, simple, and specific
- * rules for each data type without the need for complex conditional logic based on
- * document fields.
- */
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    //-------------------------------------------------------------------------
-    // Helper Functions
-    //-------------------------------------------------------------------------
-
-    /**
-     * Checks if a user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user's ID matches the provided userId.
-     * This is the fundamental check for ownership.
-     * @param userId The user ID to check against the authenticated user.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * Checks for ownership on an existing document. Used for update and delete
-     * operations to ensure the target document exists before modification.
-     * @param userId The user ID to check for ownership.
-     */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
-    /**
-     * Validates a new user profile document on creation.
-     * Ensures the user is creating their own document and that the document's
-     * internal `uid` field correctly matches their user ID for relational integrity.
-     */
     function isCreatingOwnProfile(userId) {
       return isOwner(userId) && request.resource.data.uid == userId;
     }
 
-    /**
-     * Validates a user profile document on update.
-     * Ensures the user is updating their own document and that the unique `uid`
-     * field is not being changed.
-     */
     function isUpdatingOwnProfile(userId) {
       return isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
     }
 
-    /**
-     * Validates a new subcollection document (e.g., income, expense) on creation.
-     * Ensures the owner is creating the document and that the internal `userId`
-     * field correctly matches the owner's ID in the path.
-     */
     function isCreatingOwnSubcollectionDoc(userId) {
       return isOwner(userId) && request.resource.data.userId == userId;
     }
 
-    /**
-     * Validates a subcollection document on update.
-     * Ensures the user is updating their own document and that the `userId`
-     * foreign key field is immutable.
-     */
     function isUpdatingOwnSubcollectionDoc(userId) {
       return isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
     }
 
-
-    //-------------------------------------------------------------------------
-    // Collection Rules
-    //-------------------------------------------------------------------------
-
-    /**
-     * @description Manages user profile documents.
-     * @path /users/{userId}
-     * @allow (create) An authenticated user creating their own profile document.
-     * @deny (list) Any user attempting to list all documents in the `/users` collection.
-     * @principle Restricts access to a user's own data tree and prevents user enumeration.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
@@ -116,52 +38,24 @@ service cloud.firestore {
       allow update: if isUpdatingOwnProfile(userId);
       allow delete: if isExistingOwner(userId);
 
-      /**
-       * @description Manages a user's income entries.
-       * @path /users/{userId}/incomes/{incomeId}
-       */
       match /incomes/{incomeId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isCreatingOwnSubcollectionDoc(userId);
-        allow update: if isUpdatingOwnSubcollectionDoc(userId);
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId);
       }
 
-      /**
-       * @description Manages a user's expense entries.
-       * @path /users/{userId}/expenses/{expenseId}
-       */
       match /expenses/{expenseId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isCreatingOwnSubcollectionDoc(userId);
-        allow update: if isUpdatingOwnSubcollectionDoc(userId);
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId);
       }
 
-      /**
-       * @description Manages a user's monthly balance summaries.
-       * @path /users/{userId}/balances/{balanceId}
-       */
       match /balances/{balanceId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isCreatingOwnSubcollectionDoc(userId);
-        allow update: if isUpdatingOwnSubcollectionDoc(userId);
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId);
       }
 
-      /**
-       * @description Manages a user's calendar events.
-       * @path /users/{userId}/events/{eventId}
-       */
       match /events/{eventId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isCreatingOwnSubcollectionDoc(userId);
-        allow update: if isUpdatingOwnSubcollectionDoc(userId);
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
+
+      match /external_calendars/{calendarId} {
+        allow get, list, create, update, delete: if isOwner(userId);
       }
     }
   }

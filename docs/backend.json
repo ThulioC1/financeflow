@@ -225,6 +225,20 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userId", "title", "startDate", "endDate", "createdAt"]
+    },
+    "ExternalCalendar": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Agenda Externa",
+      "type": "object",
+      "description": "Representa uma URL de agenda externa (Google) para acompanhamento.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "url", "createdAt"]
     }
   },
   "auth": {
@@ -284,6 +298,16 @@
             "$ref": "#/backend/entities/CalendarEvent"
           },
           "description": "Armazena compromissos da agenda do usuário."
+        }
+      },
+      {
+        "path": "/users/{userId}/external_calendars/{calendarId}",
+        "definition": {
+          "entityName": "ExternalCalendar",
+          "schema": {
+            "$ref": "#/backend/entities/ExternalCalendar"
+          },
+          "description": "Armazena links de agendas externas do Google."
         }
       }
     ]

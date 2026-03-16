@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   format, 
   startOfMonth, 
@@ -14,21 +14,19 @@ import {
   addMonths, 
   subMonths,
   startOfDay,
-  differenceInDays
+  differenceInDays,
+  isWithinInterval
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   ChevronLeft, 
   ChevronRight, 
   Plus, 
-  Calendar as CalendarIcon,
-  Clock,
-  MapPin,
-  Trash2,
-  RefreshCw,
-  Repeat,
-  ExternalLink,
-  Edit2
+  Clock, 
+  Trash2, 
+  Repeat, 
+  Edit2,
+  Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -71,6 +69,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { CalendarEvent, EventRecurrence } from '@/lib/types';
+import { fetchExternalCalendarEvents, type ExternalEvent } from '@/app/actions/calendar-actions';
 
 interface ExternalCalendar {
   id: string;
@@ -88,6 +87,8 @@ export default function AgendaPage() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [editingExternal, setEditingExternal] = useState<ExternalCalendar | null>(null);
   const [recurrence, setRecurrence] = useState<EventRecurrence>('none');
+  const [externalEvents, setExternalEvents] = useState<ExternalEvent[]>([]);
+  const [isFetchingExternal, setIsFetchingExternal] = useState(false);
 
   const { user } = useUser();
   const db = useFirestore();
@@ -105,6 +106,25 @@ export default function AgendaPage() {
 
   const { data: events, isLoading } = useCollection<CalendarEvent>(eventsQuery);
   const { data: externalCalendars, isLoading: isExternalLoading } = useCollection<ExternalCalendar>(externalQuery);
+
+  // Busca eventos das agendas externas quando a lista de URLs muda
+  useEffect(() => {
+    async function loadExternalEvents() {
+      if (!externalCalendars || externalCalendars.length === 0) {
+        setExternalEvents([]);
+        return;
+      }
+      setIsFetchingExternal(true);
+      const allEvents: ExternalEvent[] = [];
+      for (const cal of externalCalendars) {
+        const calEvents = await fetchExternalCalendarEvents(cal.url, cal.name);
+        allEvents.push(...calEvents);
+      }
+      setExternalEvents(allEvents);
+      setIsFetchingExternal(false);
+    }
+    loadExternalEvents();
+  }, [externalCalendars]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
@@ -146,21 +166,29 @@ export default function AgendaPage() {
       const targetMonth = targetDay.getMonth();
       const targetDate = targetDay.getDate();
       const startMonth = eventStart.getMonth();
-      const startDate = eventStart.getDate();
-      return targetMonth === startMonth && targetDate === startDate;
+      const startDateValue = eventStart.getDate();
+      return targetMonth === startMonth && targetDate === startDateValue;
     }
 
     return false;
   };
 
+  const checkExternalEventOnDay = (event: ExternalEvent, day: Date) => {
+    const start = startOfDay(new Date(event.startDate));
+    const end = startOfDay(new Date(event.endDate));
+    const target = startOfDay(day);
+    return isWithinInterval(target, { start, end });
+  };
+
   const getEventsForDay = (day: Date) => {
-    if (!events) return [];
-    return events.filter(event => checkEventOnDay(event, day));
+    const local = events ? events.filter(event => checkEventOnDay(event, day)) : [];
+    const external = externalEvents.filter(event => checkExternalEventOnDay(event, day));
+    return { local, external };
   };
 
   const selectedDayEvents = useMemo(() => {
     return getEventsForDay(selectedDate);
-  }, [events, selectedDate]);
+  }, [events, externalEvents, selectedDate]);
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -319,17 +347,23 @@ export default function AgendaPage() {
             </div>
             <div className="grid grid-cols-7 gap-px bg-muted overflow-hidden">
               {calendarDays.map((day) => {
-                const dayEvents = getEventsForDay(day);
+                const { local, external } = getEventsForDay(day);
                 const isSelected = isSameDay(day, selectedDate);
                 const isCurrentMonth = isSameMonth(day, monthStart);
                 const isToday = isSameDay(day, new Date());
+                
                 return (
                   <div key={day.toString()} onClick={() => setSelectedDate(day)} className={cn("min-h-[80px] sm:min-h-[120px] bg-background p-1 sm:p-2 cursor-pointer transition-colors hover:bg-muted/50 relative", !isCurrentMonth && "text-muted-foreground bg-muted/20", isSelected && "bg-primary/5 ring-1 ring-inset ring-primary z-10")}>
                     <span className={cn("inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium", isToday && "bg-primary text-primary-foreground", !isToday && isSelected && "text-primary")}>{format(day, 'd')}</span>
                     <div className="mt-1 space-y-1">
-                      {dayEvents.slice(0, 3).map(event => (
-                        <div key={`${event.id}-${day.getTime()}`} className={cn("truncate text-[10px] sm:text-xs px-1 py-0.5 rounded border flex items-center gap-1", event.recurrence && event.recurrence !== 'none' ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-indigo-100 text-indigo-700 border-indigo-200")}>
+                      {local.slice(0, 2).map(event => (
+                        <div key={`${event.id}-${day.getTime()}`} className={cn("truncate text-[10px] sm:text-xs px-1 py-0.5 rounded border flex items-center gap-1 bg-indigo-100 text-indigo-700 border-indigo-200")}>
                           {(event.recurrence && event.recurrence !== 'none') && <Repeat className="h-2 w-2" />}{event.title}
+                        </div>
+                      ))}
+                      {external.slice(0, 1).map(event => (
+                        <div key={`${event.id}-${day.getTime()}`} className="truncate text-[10px] sm:text-xs px-1 py-0.5 rounded border bg-emerald-100 text-emerald-700 border-emerald-200 flex items-center gap-1">
+                          <Globe className="h-2 w-2" />{event.title}
                         </div>
                       ))}
                     </div>
@@ -347,13 +381,22 @@ export default function AgendaPage() {
               <CardDescription>{format(selectedDate, "eeee, d 'de' MMMM", { locale: ptBR })}</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? <div className="space-y-4"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : selectedDayEvents.length > 0 ? (
+              {isLoading || isFetchingExternal ? (
                 <div className="space-y-4">
-                  {selectedDayEvents.map(event => (
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : (selectedDayEvents.local.length > 0 || selectedDayEvents.external.length > 0) ? (
+                <div className="space-y-4">
+                  {/* Eventos Locais */}
+                  {selectedDayEvents.local.map(event => (
                     <div key={`${event.id}-${selectedDate.getTime()}`} className="group relative flex flex-col gap-2 p-3 rounded-lg border bg-card transition-all hover:shadow-md">
                       <div className="flex justify-between items-start">
                         <div className="flex flex-col">
-                          <h4 className="font-bold text-sm flex items-center gap-2">{event.title}{event.recurrence && event.recurrence !== 'none' && <Repeat className="h-3 w-3 text-amber-500" />}</h4>
+                          <h4 className="font-bold text-sm flex items-center gap-2">
+                            {event.title}
+                            {event.recurrence && event.recurrence !== 'none' && <Repeat className="h-3 w-3 text-amber-500" />}
+                          </h4>
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingEvent(event); setRecurrence(event.recurrence || 'none'); setIsAddDialogOpen(true); }}><Edit2 className="h-3 w-3" /></Button>
@@ -362,6 +405,22 @@ export default function AgendaPage() {
                       </div>
                       <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                         <div className="flex items-center gap-2"><Clock className="h-3 w-3" /><span>{format(event.startDate.toDate(), 'HH:mm')} - {format(event.endDate.toDate(), 'HH:mm')}</span></div>
+                      </div>
+                    </div>
+                  ))}
+                  {/* Eventos Externos */}
+                  {selectedDayEvents.external.map(event => (
+                    <div key={`${event.id}-${selectedDate.getTime()}`} className="flex flex-col gap-2 p-3 rounded-lg border bg-emerald-50/50 border-emerald-100">
+                      <div className="flex justify-between items-start">
+                        <div className="flex flex-col">
+                          <h4 className="font-bold text-sm flex items-center gap-2 text-emerald-800">
+                            <Globe className="h-3 w-3" /> {event.title}
+                          </h4>
+                          <span className="text-[10px] text-emerald-600 font-medium">{event.sourceName}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 text-xs text-emerald-700/70">
+                        <div className="flex items-center gap-2"><Clock className="h-3 w-3" /><span>{format(new Date(event.startDate), 'HH:mm')} - {format(new Date(event.endDate), 'HH:mm')}</span></div>
                       </div>
                     </div>
                   ))}

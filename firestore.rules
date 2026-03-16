@@ -4,7 +4,7 @@
  * complete data isolation between different users of the application.
  *
  * Data Structure: The data is organized hierarchically, with all user-specific
- * collections (incomes, expenses, balances) nested under a top-level `/users/{userId}`
+ * collections (incomes, expenses, balances, events) nested under a top-level `/users/{userId}`
  * document. This path-based ownership is the cornerstone of the security model.
  *
  * Key Security Decisions:
@@ -23,7 +23,7 @@
  * user's ID with the `userId` wildcard in the document path.
  *
  * Structural Segregation: User data is naturally segregated by the `/users/{userId}`
- * path. Furthermore, different types of financial records (incomes, expenses, balances)
+ * path. Furthermore, different types of financial records (incomes, expenses, balances, events)
  * are stored in separate subcollections, allowing for clear, simple, and specific
  * rules for each data type without the need for complex conditional logic based on
  * document fields.
@@ -119,9 +119,6 @@ service cloud.firestore {
       /**
        * @description Manages a user's income entries.
        * @path /users/{userId}/incomes/{incomeId}
-       * @allow (create) An authenticated user adding an income entry to their own account.
-       * @deny (get) User 'A' trying to read an income entry belonging to user 'B'.
-       * @principle Enforces document ownership for all operations within a user-specific subcollection.
        */
       match /incomes/{incomeId} {
         allow get: if isOwner(userId);
@@ -134,9 +131,6 @@ service cloud.firestore {
       /**
        * @description Manages a user's expense entries.
        * @path /users/{userId}/expenses/{expenseId}
-       * @allow (create) An authenticated user adding an expense entry to their own account.
-       * @deny (get) User 'A' trying to read an expense entry belonging to user 'B'.
-       * @principle Enforces document ownership for all operations within a user-specific subcollection.
        */
       match /expenses/{expenseId} {
         allow get: if isOwner(userId);
@@ -149,11 +143,20 @@ service cloud.firestore {
       /**
        * @description Manages a user's monthly balance summaries.
        * @path /users/{userId}/balances/{balanceId}
-       * @allow (create) An authenticated user adding a balance summary to their own account.
-       * @deny (get) User 'A' trying to read a balance summary belonging to user 'B'.
-       * @principle Enforces document ownership for all operations within a user-specific subcollection.
        */
       match /balances/{balanceId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isCreatingOwnSubcollectionDoc(userId);
+        allow update: if isUpdatingOwnSubcollectionDoc(userId);
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Manages a user's calendar events.
+       * @path /users/{userId}/events/{eventId}
+       */
+      match /events/{eventId} {
         allow get: if isOwner(userId);
         allow list: if isOwner(userId);
         allow create: if isCreatingOwnSubcollectionDoc(userId);

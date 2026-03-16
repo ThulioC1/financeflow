@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -124,8 +123,12 @@ export default function AgendaPage() {
       setIsFetchingExternal(true);
       const allEvents: ExternalEvent[] = [];
       for (const cal of externalCalendars) {
-        const calEvents = await fetchExternalCalendarEvents(cal.url, cal.name);
-        allEvents.push(...calEvents);
+        try {
+          const calEvents = await fetchExternalCalendarEvents(cal.url, cal.name);
+          allEvents.push(...calEvents);
+        } catch (err) {
+          console.error(`Erro ao carregar agenda ${cal.name}:`, err);
+        }
       }
       setExternalEvents(allEvents);
       setIsFetchingExternal(false);
@@ -461,7 +464,7 @@ export default function AgendaPage() {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div className="space-y-1">
                 <CardTitle className="text-lg">Agendas Externas</CardTitle>
-                <CardDescription>Acompanhe agendas do Google via URL.</CardDescription>
+                <CardDescription>Acompanhe agendas do Google.</CardDescription>
               </div>
               <Dialog open={isExternalDialogOpen} onOpenChange={(open) => {
                   setIsExternalDialogOpen(open);
@@ -482,7 +485,7 @@ export default function AgendaPage() {
                         <Label htmlFor="url">URL da Agenda (iCal)</Label>
                         <Input id="url" name="url" defaultValue={editingExternal?.url} placeholder="https://calendar.google.com/calendar/ical/..." required />
                         <p className="text-[10px] text-muted-foreground bg-muted p-2 rounded">
-                          <strong>Dica:</strong> No Google Calendar, vá em Configurações da Agenda > Integrar agenda > Copie o <strong>Endereço particular em formato iCal</strong> para evitar que os eventos apareçam apenas como "Ocupado".
+                          <strong>Dica:</strong> No Google Calendar, vá em Configurações da Agenda > Integrar agenda > Copie o <strong>Endereço particular em formato iCal</strong>.
                         </p>
                       </div>
                     </div>
@@ -495,7 +498,7 @@ export default function AgendaPage() {
               {hasBusyEvents && (
                 <div className="mb-4 p-2 text-[10px] bg-amber-50 text-amber-800 border border-amber-200 rounded flex items-start gap-2">
                   <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  <p>Alguns eventos aparecem como "Busy" (Ocupado). Para ver os títulos, use o <strong>Endereço Particular iCal</strong> nas configurações do Google Calendar.</p>
+                  <p>Alguns eventos aparecem como "Ocupado". Para ver os títulos, use o <strong>Endereço Particular iCal</strong> no Google Calendar.</p>
                 </div>
               )}
               {isExternalLoading ? <Skeleton className="h-12 w-full" /> : externalCalendars && externalCalendars.length > 0 ? (
@@ -504,7 +507,6 @@ export default function AgendaPage() {
                     <div key={cal.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 group">
                       <div className="flex flex-col overflow-hidden">
                         <span className="text-sm font-medium truncate">{cal.name}</span>
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[180px]">{cal.url}</span>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingExternal(cal); setIsExternalDialogOpen(true); }}><Edit2 className="h-3 w-3" /></Button>

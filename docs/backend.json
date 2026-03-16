@@ -220,7 +220,7 @@
         "allDay": { "type": "boolean" },
         "recurrence": {
           "type": "string",
-          "enum": ["none", "daily", "weekly", "yearly"]
+          "enum": ["none", "daily", "weekly", "biweekly", "yearly"]
         },
         "createdAt": { "type": "string", "format": "date-time" }
       },

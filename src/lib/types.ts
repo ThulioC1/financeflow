@@ -47,7 +47,7 @@ export interface Balance {
   saldoFinal: number;
 }
 
-export type EventRecurrence = 'none' | 'daily' | 'weekly' | 'yearly';
+export type EventRecurrence = 'none' | 'daily' | 'weekly' | 'biweekly' | 'yearly';
 
 export interface CalendarEvent {
   id: string;

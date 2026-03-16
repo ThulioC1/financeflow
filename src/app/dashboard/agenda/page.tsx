@@ -15,7 +15,8 @@ import {
   subMonths,
   isAfter,
   isBefore,
-  startOfDay
+  startOfDay,
+  differenceInDays
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -101,15 +102,45 @@ export default function AgendaPage() {
 
   const checkEventOnDay = (event: CalendarEvent, day: Date) => {
     const eventStart = startOfDay(event.startDate.toDate());
+    const eventEnd = startOfDay(event.endDate.toDate());
     const targetDay = startOfDay(day);
 
-    if (isSameDay(eventStart, targetDay)) return true;
-    if (isBefore(targetDay, eventStart)) return false;
+    // Duração do evento original em dias
+    const durationInDays = differenceInDays(eventEnd, eventStart);
+    
+    // Dias desde o início do evento original
+    const diffInDays = differenceInDays(targetDay, eventStart);
 
-    if (event.recurrence === 'daily') return true;
-    if (event.recurrence === 'weekly') return eventStart.getDay() === targetDay.getDay();
+    if (diffInDays < 0) return false;
+
+    if (event.recurrence === 'none') {
+      return diffInDays <= durationInDays;
+    }
+
+    if (event.recurrence === 'daily') {
+      return true;
+    }
+
+    if (event.recurrence === 'weekly') {
+      // Verifica se o dia atual cai dentro da janela de duração em qualquer semana
+      return (diffInDays % 7) <= durationInDays;
+    }
+
+    if (event.recurrence === 'biweekly') {
+      // Lógica de "semana sim, semana não"
+      // Um ciclo de 14 dias: os primeiros 'duration' dias do ciclo são ativos
+      return (diffInDays % 14) <= durationInDays;
+    }
+
     if (event.recurrence === 'yearly') {
-      return eventStart.getDate() === targetDay.getDate() && eventStart.getMonth() === targetDay.getMonth();
+      // Simplificado: verifica se o mês e dia batem (considerando a duração)
+      const targetMonth = targetDay.getMonth();
+      const targetDate = targetDay.getDate();
+      const startMonth = eventStart.getMonth();
+      const startDate = eventStart.getDate();
+      
+      // Para duração de 1 dia, apenas o dia exato. Para mais, precisaria de lógica complexa.
+      return targetMonth === startMonth && targetDate === startDate;
     }
 
     return false;
@@ -137,8 +168,9 @@ export default function AgendaPage() {
     const location = formData.get('location') as string;
     const startTime = formData.get('startTime') as string;
     const endTime = formData.get('endTime') as string;
+    const endLocalDate = formData.get('endDate') as string;
 
-    if (!title || !startTime || !endTime) return;
+    if (!title || !startTime || !endTime || !endLocalDate) return;
 
     const [startH, startM] = startTime.split(':').map(Number);
     const [endH, endM] = endTime.split(':').map(Number);
@@ -146,7 +178,7 @@ export default function AgendaPage() {
     const eventStartDate = new Date(selectedDate);
     eventStartDate.setHours(startH, startM);
 
-    const eventEndDate = new Date(selectedDate);
+    const eventEndDate = new Date(endLocalDate);
     eventEndDate.setHours(endH, endM);
 
     const eventId = editingEvent?.id || crypto.randomUUID();
@@ -190,7 +222,7 @@ export default function AgendaPage() {
   const handleGoogleSync = () => {
     toast({
       title: "Sincronização com Google",
-      description: "Para integrar sua conta real, é necessário configurar as credenciais do Google API no Firebase Console.",
+      description: "A integração com Google Calendar está em desenvolvimento.",
     });
   };
 
@@ -224,7 +256,7 @@ export default function AgendaPage() {
                 <DialogHeader>
                   <DialogTitle>{editingEvent ? 'Editar Evento' : 'Novo Evento'}</DialogTitle>
                   <DialogDescription>
-                    {format(selectedDate, "eeee, d 'de' MMMM", { locale: ptBR })}
+                    Iniciando em: {format(selectedDate, "eeee, d 'de' MMMM", { locale: ptBR })}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -232,9 +264,10 @@ export default function AgendaPage() {
                     <Label htmlFor="title">Título</Label>
                     <Input id="title" name="title" defaultValue={editingEvent?.title} required />
                   </div>
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="startTime">Início</Label>
+                      <Label htmlFor="startTime">Hora Início</Label>
                       <Input 
                         id="startTime" 
                         name="startTime" 
@@ -244,7 +277,7 @@ export default function AgendaPage() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="endTime">Fim</Label>
+                      <Label htmlFor="endTime">Hora Fim</Label>
                       <Input 
                         id="endTime" 
                         name="endTime" 
@@ -254,6 +287,19 @@ export default function AgendaPage() {
                       />
                     </div>
                   </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="endDate">Data de Término</Label>
+                    <Input 
+                      id="endDate" 
+                      name="endDate" 
+                      type="date" 
+                      defaultValue={editingEvent ? format(editingEvent.endDate.toDate(), 'yyyy-MM-dd') : format(selectedDate, 'yyyy-MM-dd')} 
+                      required 
+                    />
+                    <p className="text-[10px] text-muted-foreground">Para eventos de um dia, mantenha a mesma data.</p>
+                  </div>
+
                   <div className="grid gap-2">
                     <Label htmlFor="recurrence">Repetir</Label>
                     <Select value={recurrence} onValueChange={(v: EventRecurrence) => setRecurrence(v)}>
@@ -264,6 +310,7 @@ export default function AgendaPage() {
                         <SelectItem value="none">Não se repete</SelectItem>
                         <SelectItem value="daily">Diariamente</SelectItem>
                         <SelectItem value="weekly">Semanalmente</SelectItem>
+                        <SelectItem value="biweekly">Semana sim, semana não</SelectItem>
                         <SelectItem value="yearly">Anualmente</SelectItem>
                       </SelectContent>
                     </Select>
@@ -287,7 +334,6 @@ export default function AgendaPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Calendário Grid */}
         <Card className="lg:col-span-8">
           <CardHeader className="flex flex-row items-center justify-between pb-4">
             <CardTitle className="text-xl font-headline capitalize">
@@ -351,7 +397,7 @@ export default function AgendaPage() {
                               : "bg-indigo-100 text-indigo-700 border-indigo-200"
                           )}
                         >
-                          {event.recurrence && event.recurrence !== 'none' && <Repeat className="h-2 w-2" />}
+                          {(event.recurrence && event.recurrence !== 'none') && <Repeat className="h-2 w-2" />}
                           {event.title}
                         </div>
                       ))}
@@ -368,7 +414,6 @@ export default function AgendaPage() {
           </CardContent>
         </Card>
 
-        {/* Lista de Compromissos do Dia */}
         <div className="lg:col-span-4 space-y-6">
           <Card className="h-full">
             <CardHeader>
@@ -402,7 +447,8 @@ export default function AgendaPage() {
                             <span className="text-[10px] text-amber-600 font-medium">
                               Repete: {
                                 event.recurrence === 'daily' ? 'Diariamente' :
-                                event.recurrence === 'weekly' ? 'Semanalmente' : 'Anualmente'
+                                event.recurrence === 'weekly' ? 'Semanalmente' : 
+                                event.recurrence === 'biweekly' ? 'Semana sim, semana não' : 'Anualmente'
                               }
                             </span>
                           )}
@@ -436,6 +482,11 @@ export default function AgendaPage() {
                           <Clock className="h-3 w-3" />
                           <span>
                             {format(event.startDate.toDate(), 'HH:mm')} - {format(event.endDate.toDate(), 'HH:mm')}
+                            {differenceInDays(event.endDate.toDate(), event.startDate.toDate()) > 0 && (
+                              <span className="ml-1 text-primary">
+                                (+{differenceInDays(event.endDate.toDate(), event.startDate.toDate())}d)
+                              </span>
+                            )}
                           </span>
                         </div>
                         {event.location && (

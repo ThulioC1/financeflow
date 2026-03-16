@@ -127,19 +127,17 @@ export default function AgendaPage() {
     }
 
     if (event.recurrence === 'biweekly') {
-      // Lógica de "semana sim, semana não"
-      // Um ciclo de 14 dias: os primeiros 'duration' dias do ciclo são ativos
+      // Lógica de "semana sim, semana não" baseada em um ciclo de 14 dias
       return (diffInDays % 14) <= durationInDays;
     }
 
     if (event.recurrence === 'yearly') {
-      // Simplificado: verifica se o mês e dia batem (considerando a duração)
       const targetMonth = targetDay.getMonth();
       const targetDate = targetDay.getDate();
       const startMonth = eventStart.getMonth();
       const startDate = eventStart.getDate();
       
-      // Para duração de 1 dia, apenas o dia exato. Para mais, precisaria de lógica complexa.
+      // Simplificado: verifica se o dia e mês batem (considerando o início do evento)
       return targetMonth === startMonth && targetDate === startDate;
     }
 
@@ -168,18 +166,19 @@ export default function AgendaPage() {
     const location = formData.get('location') as string;
     const startTime = formData.get('startTime') as string;
     const endTime = formData.get('endTime') as string;
-    const endLocalDate = formData.get('endDate') as string;
+    const endLocalDateStr = formData.get('endDate') as string;
 
-    if (!title || !startTime || !endTime || !endLocalDate) return;
+    if (!title || !startTime || !endTime || !endLocalDateStr) return;
 
     const [startH, startM] = startTime.split(':').map(Number);
     const [endH, endM] = endTime.split(':').map(Number);
 
-    const eventStartDate = new Date(selectedDate);
-    eventStartDate.setHours(startH, startM);
+    // Parsing manual das datas para evitar distorções de fuso horário (UTC vs Local)
+    const [startYear, startMonth, startDay] = format(selectedDate, 'yyyy-MM-dd').split('-').map(Number);
+    const [endYear, endMonth, endDay] = endLocalDateStr.split('-').map(Number);
 
-    const eventEndDate = new Date(endLocalDate);
-    eventEndDate.setHours(endH, endM);
+    const eventStartDate = new Date(startYear, startMonth - 1, startDay, startH, startM);
+    const eventEndDate = new Date(endYear, endMonth - 1, endDay, endH, endM);
 
     const eventId = editingEvent?.id || crypto.randomUUID();
     const eventRef = doc(db, 'users', user.uid, 'events', eventId);
@@ -262,7 +261,7 @@ export default function AgendaPage() {
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="title">Título</Label>
-                    <Input id="title" name="title" defaultValue={editingEvent?.title} required />
+                    <Input id="title" name="title" defaultValue={editingEvent?.title} placeholder="Ex: Treinamento Semanal" required />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
@@ -297,7 +296,7 @@ export default function AgendaPage() {
                       defaultValue={editingEvent ? format(editingEvent.endDate.toDate(), 'yyyy-MM-dd') : format(selectedDate, 'yyyy-MM-dd')} 
                       required 
                     />
-                    <p className="text-[10px] text-muted-foreground">Para eventos de um dia, mantenha a mesma data.</p>
+                    <p className="text-[10px] text-muted-foreground">Para um ciclo de uma semana (Seg-Sex), selecione a sexta-feira correspondente.</p>
                   </div>
 
                   <div className="grid gap-2">
@@ -321,7 +320,7 @@ export default function AgendaPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="description">Descrição</Label>
-                    <Textarea id="description" name="description" defaultValue={editingEvent?.description} />
+                    <Textarea id="description" name="description" defaultValue={editingEvent?.description} placeholder="Notas adicionais..." />
                   </div>
                 </div>
                 <DialogFooter>

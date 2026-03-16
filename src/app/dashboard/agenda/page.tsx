@@ -284,7 +284,10 @@ export default function AgendaPage() {
   };
 
   const hasBusyEvents = useMemo(() => {
-    return externalEvents.some(e => e.title.toLowerCase() === 'busy' || e.title.toLowerCase() === 'ocupado');
+    return externalEvents.some(e => {
+      const title = e.title?.toLowerCase();
+      return title === 'busy' || title === 'ocupado';
+    });
   }, [externalEvents]);
 
   return (
@@ -374,7 +377,7 @@ export default function AgendaPage() {
                       ))}
                       {external.slice(0, 1).map(event => (
                         <div key={`${event.id}-${day.getTime()}`} className="truncate text-[10px] sm:text-xs px-1 py-0.5 rounded border bg-emerald-100 text-emerald-700 border-emerald-200 flex items-center gap-1">
-                          <Globe className="h-2 w-2" />{event.title}
+                          <Globe className="h-2 w-2" />{event.title || '(Ocupado)'}
                         </div>
                       ))}
                     </div>
@@ -418,33 +421,37 @@ export default function AgendaPage() {
                       </div>
                     </div>
                   ))}
-                  {selectedDayEvents.external.map(event => (
-                    <div key={`${event.id}-${selectedDate.getTime()}`} className="flex flex-col gap-2 p-3 rounded-lg border bg-emerald-50/50 border-emerald-100">
-                      <div className="flex justify-between items-start">
-                        <div className="flex flex-col">
-                          <h4 className="font-bold text-sm flex items-center gap-2 text-emerald-800">
-                            <Globe className="h-3 w-3" /> {event.title}
-                          </h4>
-                          <span className="text-[10px] text-emerald-600 font-medium">{event.sourceName}</span>
+                  {selectedDayEvents.external.map(event => {
+                    const title = event.title?.toLowerCase();
+                    const isBusy = title === 'busy' || title === 'ocupado';
+                    return (
+                      <div key={`${event.id}-${selectedDate.getTime()}`} className="flex flex-col gap-2 p-3 rounded-lg border bg-emerald-50/50 border-emerald-100">
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col">
+                            <h4 className="font-bold text-sm flex items-center gap-2 text-emerald-800">
+                              <Globe className="h-3 w-3" /> {event.title || '(Ocupado)'}
+                            </h4>
+                            <span className="text-[10px] text-emerald-600 font-medium">{event.sourceName}</span>
+                          </div>
+                          {isBusy && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertCircle className="h-4 w-4 text-amber-500 cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[200px]">
+                                  <p>Este evento está oculto devido às configurações de privacidade da agenda externa. Mude para "Ver todos os detalhes" no Google Calendar.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
-                        {(event.title.toLowerCase() === 'busy' || event.title.toLowerCase() === 'ocupado') && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <AlertCircle className="h-4 w-4 text-amber-500 cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-[200px]">
-                                <p>Este evento está oculto devido às configurações de privacidade da agenda externa. Mude para "Ver todos os detalhes" no Google Calendar.</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                        <div className="flex flex-col gap-1 text-xs text-emerald-700/70">
+                          <div className="flex items-center gap-2"><Clock className="h-3 w-3" /><span>{format(new Date(event.startDate), 'HH:mm')} - {format(new Date(event.endDate), 'HH:mm')}</span></div>
+                        </div>
                       </div>
-                      <div className="flex flex-col gap-1 text-xs text-emerald-700/70">
-                        <div className="flex items-center gap-2"><Clock className="h-3 w-3" /><span>{format(new Date(event.startDate), 'HH:mm')} - {format(new Date(event.endDate), 'HH:mm')}</span></div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : <p className="text-sm text-center text-muted-foreground py-12">Nenhum compromisso para hoje.</p>}
             </CardContent>

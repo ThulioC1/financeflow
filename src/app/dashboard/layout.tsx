@@ -1,3 +1,4 @@
+
 'use client';
 
 import { MainNav } from '@/components/layout/main-nav';
@@ -10,6 +11,7 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { NotificationChecker } from '@/components/dashboard/notification-checker';
 import { Code2, Heart } from 'lucide-react';
+import { ModeToggle } from '@/components/mode-toggle';
 
 export default function DashboardLayout({
   children,
@@ -69,7 +71,10 @@ export default function DashboardLayout({
                <h2 className="text-sm font-medium text-muted-foreground">Bem-vindo, <span className="text-foreground font-bold">{user.displayName?.split(' ')[0]}</span></h2>
             </div>
           </div>
-          <UserNav />
+          <div className="flex items-center gap-3">
+            <ModeToggle />
+            <UserNav />
+          </div>
         </header>
         <main className="flex-1 p-4 pb-24 md:p-6 lg:p-8 md:pb-8">
           {children}

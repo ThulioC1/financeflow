@@ -3,18 +3,30 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'FinanceFlow',
+    name: 'FinanceFlow - Gestão Financeira',
     short_name: 'FinanceFlow',
-    description: 'Seu assistente financeiro pessoal.',
+    description: 'Seu assistente financeiro pessoal de alta performance.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#f5f5f5',
-    theme_color: '#71b7ef',
+    background_color: '#ffffff',
+    theme_color: '#3b82f6',
     icons: [
       {
-        src: '/favicon.ico',
-        sizes: 'any',
-        type: 'image/x-icon',
+        src: 'https://picsum.photos/seed/financeflow/192/192',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: 'https://picsum.photos/seed/financeflow/192/192',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: 'https://picsum.photos/seed/financeflow/512/512',
+        sizes: '512x512',
+        type: 'image/png',
       },
     ],
   }

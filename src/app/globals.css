@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -38,9 +39,14 @@
 @layer base {
   * {
     @apply border-border;
+    /* Impede seleção de texto em elementos de UI para parecer mais app */
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground font-body antialiased;
+    /* Melhora o comportamento de scroll em dispositivos móveis */
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
@@ -53,4 +59,11 @@
 
 .gradient-bg {
   @apply bg-gradient-to-br from-slate-50 to-slate-100;
+}
+
+/* Ajuste para preencher toda a tela em iPhones com notch */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .fixed-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

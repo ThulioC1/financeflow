@@ -108,7 +108,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div className="space-y-1">
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Visão Geral</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">Visão Geral</h1>
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Calendar className="h-3.5 w-3.5" />
                   Relatório financeiro de <span className="font-bold text-foreground capitalize">{formatMonth(selectedMonth)}</span>.
@@ -116,7 +116,7 @@ export default function DashboardPage() {
           </div>
           <div className="w-full sm:w-auto">
             <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-              <SelectTrigger className="w-full sm:w-[220px] bg-white shadow-sm border-slate-200">
+              <SelectTrigger className="w-full sm:w-[220px]">
                   <SelectValue placeholder="Selecione um mês" />
               </SelectTrigger>
               <SelectContent>
@@ -166,7 +166,7 @@ export default function DashboardPage() {
               value={formatCurrency(stats.totalRecebido - stats.totalGasto)}
               icon={BarChart3}
               description="Diferença entre E/S"
-              color="bg-indigo-600 shadow-indigo-200"
+              color="bg-blue-600 shadow-blue-200"
             />
           </>
         )}
@@ -177,13 +177,13 @@ export default function DashboardPage() {
           <OverviewChart expenses={stats.currentMonthExpenses} isLoading={isLoading} />
         </div>
         <Card className="h-full border-slate-200 shadow-sm overflow-hidden">
-          <CardHeader className="bg-slate-50/50 border-b">
+          <CardHeader className="bg-muted/50 border-b">
             <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground">
-               <div className="mb-3 rounded-full bg-indigo-50 p-3">
-                 <BarChart3 className="h-6 w-6 text-indigo-400" />
+               <div className="mb-3 rounded-full bg-primary/10 p-3">
+                 <BarChart3 className="h-6 w-6 text-primary" />
                </div>
                <p className="text-sm font-medium">Analise detalhada por dia vindo em breve.</p>
             </div>

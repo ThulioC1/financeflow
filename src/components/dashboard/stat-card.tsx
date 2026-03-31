@@ -12,14 +12,14 @@ interface StatCardProps {
 
 export function StatCard({ title, value, icon: Icon, description, color }: StatCardProps) {
   return (
-    <Card className="overflow-hidden border-none shadow-md ring-1 ring-slate-200/50 transition-all hover:shadow-lg">
+    <Card className="overflow-hidden border-none shadow-md ring-1 ring-border transition-all hover:shadow-lg">
       <CardContent className="p-6">
         <div className="flex items-center justify-between space-y-0 pb-4">
           <div className="space-y-1">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               {title}
             </p>
-            <div className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+            <div className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
               {value}
             </div>
           </div>

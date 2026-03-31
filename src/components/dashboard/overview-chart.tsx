@@ -12,14 +12,14 @@ interface OverviewChartProps {
 }
 
 const COLORS = [
-    'hsl(var(--chart-1))',
-    'hsl(var(--chart-2))',
-    'hsl(var(--chart-3))',
-    'hsl(var(--chart-4))',
-    'hsl(var(--chart-5))',
-    'hsl(240 5.9% 10%)',
-    'hsl(0 72.2% 50.6%)',
-    'hsl(24.6 95% 53.1%)',
+    '#3b82f6', // Primary Blue
+    '#10b981', // Success Green
+    '#6366f1', // Indigo
+    '#8b5cf6', // Violet
+    '#06b6d4', // Cyan
+    '#f59e0b', // Amber
+    '#ec4899', // Pink
+    '#2dd4bf', // Teal
 ];
 
 export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
@@ -43,9 +43,9 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
 
 
   return (
-     <Card className="h-full">
+     <Card className="h-full border-slate-200 shadow-sm">
       <CardHeader>
-        <CardTitle className='font-headline'>Despesas por Categoria</CardTitle>
+        <CardTitle className='font-headline text-lg'>Despesas por Categoria</CardTitle>
         <CardDescription>Distribuição de gastos do mês atual.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -59,39 +59,29 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
                   background: "hsl(var(--background))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "var(--radius)",
+                  boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
                 }}
                 formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               />
-              <Legend wrapperStyle={{fontSize: "0.875rem"}}/>
+              <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: "12px", paddingTop: "20px"}}/>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
-                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                    if (percent === 0) return null;
-                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                    const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                    const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                    return (
-                        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                            {`${(percent * 100).toFixed(0)}%`}
-                        </text>
-                    );
-                }}
-                outerRadius={100}
-                fill="#8884d8"
+                innerRadius={60}
+                outerRadius={90}
+                paddingAngle={5}
                 dataKey="value"
                 nameKey="name"
               >
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="transparent" />
                 ))}
               </Pie>
             </PieChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+          <div className="flex h-[300px] items-center justify-center text-muted-foreground italic text-sm">
             <p>Nenhuma despesa registrada para este mês.</p>
           </div>
         )}

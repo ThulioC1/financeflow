@@ -166,7 +166,7 @@ export default function DashboardPage() {
               value={formatCurrency(stats.totalRecebido - stats.totalGasto)}
               icon={BarChart3}
               description="Diferença entre E/S"
-              color="bg-slate-800 shadow-slate-200"
+              color="bg-indigo-600 shadow-indigo-200"
             />
           </>
         )}
@@ -182,10 +182,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-6">
             <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground">
-               <div className="mb-3 rounded-full bg-slate-100 p-3">
-                 <BarChart3 className="h-6 w-6 text-slate-400" />
+               <div className="mb-3 rounded-full bg-indigo-50 p-3">
+                 <BarChart3 className="h-6 w-6 text-indigo-400" />
                </div>
-               <p className="text-sm">Analise detalhada por dia vindo em breve.</p>
+               <p className="text-sm font-medium">Analise detalhada por dia vindo em breve.</p>
             </div>
           </CardContent>
         </Card>

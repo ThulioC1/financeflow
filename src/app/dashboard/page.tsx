@@ -1,14 +1,14 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { OverviewChart } from '@/components/dashboard/overview-chart';
 import {
-  Banknote,
-  TrendingUp,
-  TrendingDown,
-  Scale,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  BarChart3,
+  Calendar,
 } from 'lucide-react';
 import {
     Select,
@@ -21,6 +21,7 @@ import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebas
 import { collection } from 'firebase/firestore';
 import type { Income, Expense } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', {
@@ -104,22 +105,23 @@ export default function DashboardPage() {
   }, [incomes, expenses, selectedMonth]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-              <h1 className="text-3xl font-bold font-headline text-primary">Dashboard</h1>
-              <p className="text-muted-foreground">
-                  Resumo financeiro para {formatMonth(selectedMonth)}.
+          <div className="space-y-1">
+              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Visão Geral</h1>
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Relatório financeiro de <span className="font-bold text-foreground capitalize">{formatMonth(selectedMonth)}</span>.
               </p>
           </div>
           <div className="w-full sm:w-auto">
             <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-              <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectTrigger className="w-full sm:w-[220px] bg-white shadow-sm border-slate-200">
                   <SelectValue placeholder="Selecione um mês" />
               </SelectTrigger>
               <SelectContent>
                   {availableMonths.map(month => (
-                      <SelectItem key={month} value={month}>
+                      <SelectItem key={month} value={month} className="capitalize">
                           {formatMonth(month)}
                       </SelectItem>
                   ))}
@@ -128,50 +130,65 @@ export default function DashboardPage() {
           </div>
         </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {isLoading ? (
           <>
-            <Skeleton className="h-[126px]" />
-            <Skeleton className="h-[126px]" />
-            <Skeleton className="h-[126px]" />
-            <Skeleton className="h-[126px]" />
+            <Skeleton className="h-[120px] rounded-2xl" />
+            <Skeleton className="h-[120px] rounded-2xl" />
+            <Skeleton className="h-[120px] rounded-2xl" />
+            <Skeleton className="h-[120px] rounded-2xl" />
           </>
         ) : (
           <>
             <StatCard
               title="Saldo Atual"
               value={formatCurrency(stats.saldoAtual)}
-              icon={Scale}
-              description="Saldo após movimentações do mês"
-              color="bg-indigo-500"
+              icon={Wallet}
+              description="Saldo final projetado"
+              color="bg-primary shadow-primary/20"
             />
             <StatCard
-              title="Saldo Inicial"
-              value={formatCurrency(stats.saldoInicial)}
-              icon={Banknote}
-              description="Saldo do final do mês anterior"
-              color="bg-sky-500"
-            />
-            <StatCard
-              title="Receitas no Mês"
+              title="Receitas"
               value={formatCurrency(stats.totalRecebido)}
-              icon={TrendingUp}
-              description="Total de receitas pagas"
-              color="bg-green-500"
+              icon={ArrowUpRight}
+              description="Total recebido no mês"
+              color="bg-emerald-500 shadow-emerald-200"
             />
             <StatCard
-              title="Despesas no Mês"
+              title="Despesas"
               value={formatCurrency(stats.totalGasto)}
-              icon={TrendingDown}
-              description="Total de despesas pagas"
-              color="bg-red-500"
+              icon={ArrowDownRight}
+              description="Total gasto no mês"
+              color="bg-rose-500 shadow-rose-200"
+            />
+            <StatCard
+              title="Balanço"
+              value={formatCurrency(stats.totalRecebido - stats.totalGasto)}
+              icon={BarChart3}
+              description="Diferença entre E/S"
+              color="bg-slate-800 shadow-slate-200"
             />
           </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <OverviewChart expenses={stats.currentMonthExpenses} isLoading={isLoading} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <OverviewChart expenses={stats.currentMonthExpenses} isLoading={isLoading} />
+        </div>
+        <Card className="h-full border-slate-200 shadow-sm overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b">
+            <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground">
+               <div className="mb-3 rounded-full bg-slate-100 p-3">
+                 <BarChart3 className="h-6 w-6 text-slate-400" />
+               </div>
+               <p className="text-sm">Analise detalhada por dia vindo em breve.</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -48,6 +48,10 @@
           "type": "string",
           "description": "Referência ao usuário que possui esta receita."
         },
+        "descricao": {
+          "type": "string",
+          "description": "Uma breve descrição da fonte da receita."
+        },
         "valor": {
           "type": "number",
           "description": "O valor da receita."

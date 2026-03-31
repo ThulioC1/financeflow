@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -41,6 +42,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 
 const incomeSchema = z.object({
+    descricao: z.string().optional(),
     tipo: z.enum(['mensal', 'quinzena 1', 'quinzena 2', 'extra'], {required_error: "Selecione um tipo."}),
     valor: z.coerce.number().positive({ message: 'Valor deve ser positivo.' }),
     mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
@@ -68,6 +70,7 @@ export function EditIncomeDialog({ income, open, onOpenChange }: EditIncomeDialo
     if (income) {
       form.reset({
         ...income,
+        descricao: income.descricao || '',
         dataRecebimento: income.dataRecebimento && typeof income.dataRecebimento.toDate === 'function' 
             ? income.dataRecebimento.toDate() 
             : null,
@@ -134,6 +137,19 @@ export function EditIncomeDialog({ income, open, onOpenChange }: EditIncomeDialo
         {income && (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="descricao"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Descrição</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Ex: Salário Empresa X" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <FormField
                     control={form.control}
                     name="tipo"

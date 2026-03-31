@@ -14,6 +14,7 @@ export type EntryStatus = 'pendente' | 'pago';
 export interface Income {
   id: string;
   userId: string;
+  descricao?: string;
   valor: number;
   tipo: IncomeType;
   mesReferencia: string; // YYYY-MM

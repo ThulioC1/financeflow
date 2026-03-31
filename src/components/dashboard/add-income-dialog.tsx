@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -39,6 +40,7 @@ import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
 
 const incomeSchema = z.object({
+  descricao: z.string().optional(),
   tipo: z.enum(['mensal', 'quinzena 1', 'quinzena 2', 'extra'], {required_error: "Selecione um tipo."}),
   valor: z.coerce.number().positive({ message: 'Valor deve ser positivo.' }),
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
@@ -56,6 +58,7 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
   const form = useForm<z.infer<typeof incomeSchema>>({
     resolver: zodResolver(incomeSchema),
     defaultValues: {
+      descricao: '',
       valor: 0,
       mesReferencia: new Date().toISOString().slice(0, 7),
       status: 'pendente',
@@ -112,6 +115,7 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
     <Dialog open={open} onOpenChange={(isOpen) => {
         if (!isOpen) {
             form.reset({
+              descricao: '',
               valor: 0,
               mesReferencia: new Date().toISOString().slice(0, 7),
               status: 'pendente',
@@ -131,6 +135,19 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+                control={form.control}
+                name="descricao"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Descrição (Opcional)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ex: Salário Empresa X" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
             <FormField
                 control={form.control}
                 name="tipo"

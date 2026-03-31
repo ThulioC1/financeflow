@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -167,7 +168,12 @@ export default function ReceitasPage() {
             <Card key={income.id} className="w-full">
               <CardContent className="p-4 space-y-2">
                 <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-bold capitalize pr-2">{income.tipo}</h3>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-lg font-bold capitalize pr-2">{income.tipo}</h3>
+                    {income.descricao && (
+                      <p className="text-sm text-muted-foreground italic">{income.descricao}</p>
+                    )}
+                  </div>
                   <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">

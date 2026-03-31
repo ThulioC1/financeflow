@@ -56,14 +56,26 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
             <PieChart>
               <Tooltip
                 contentStyle={{
-                  background: "hsl(var(--background))",
+                  backgroundColor: "hsl(var(--popover))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "var(--radius)",
                   boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                  color: "hsl(var(--popover-foreground))",
+                }}
+                itemStyle={{
+                  color: "hsl(var(--popover-foreground))",
+                }}
+                labelStyle={{
+                  color: "hsl(var(--popover-foreground))",
                 }}
                 formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               />
-              <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: "12px", paddingTop: "20px"}}/>
+              <Legend 
+                verticalAlign="bottom" 
+                height={36} 
+                iconType="circle" 
+                wrapperStyle={{fontSize: "12px", paddingTop: "20px"}}
+              />
               <Pie
                 data={data}
                 cx="50%"

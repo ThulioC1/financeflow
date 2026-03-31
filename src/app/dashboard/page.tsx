@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -21,7 +22,6 @@ import { collection } from 'firebase/firestore';
 import type { Income, Expense } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
-
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', {
       style: 'currency',
@@ -35,12 +35,10 @@ const formatMonth = (month: string) => {
     return date.toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 };
 
-
 export default function DashboardPage() {
   const { user } = useUser();
   const db = useFirestore();
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
-
 
   const incomesQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -109,14 +107,14 @@ export default function DashboardPage() {
     <div className="space-y-6">
        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-              <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
+              <h1 className="text-3xl font-bold font-headline text-primary">Dashboard</h1>
               <p className="text-muted-foreground">
                   Resumo financeiro para {formatMonth(selectedMonth)}.
               </p>
           </div>
           <div className="w-full sm:w-auto">
             <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-              <SelectTrigger className="w-[240px] sm:w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Selecione um mês" />
               </SelectTrigger>
               <SelectContent>

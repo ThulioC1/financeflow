@@ -1,4 +1,3 @@
-import { config } from 'dotenv';
-config();
 
-import '@/ai/flows/balance-forecasting.ts';
+// Arquivo de desenvolvimento de IA resetado para restauração.
+export {};

@@ -30,8 +30,13 @@ const getColorName = (index: number) => {
 };
 
 export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
+    const totalExpenses = useMemo(() => {
+        if (!expenses) return 0;
+        return expenses.reduce((acc, expense) => acc + expense.valor, 0);
+    }, [expenses]);
+
     const data = useMemo(() => {
-        if (!expenses) return [];
+        if (!expenses || totalExpenses === 0) return [];
         
         const categoryTotals = expenses.reduce((acc, expense) => {
             const category = expense.categoria;
@@ -42,30 +47,43 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
             return acc;
         }, {} as Record<string, number>);
 
-        return Object.entries(categoryTotals).map(([name, value]) => ({
-            name,
-            value,
-        }));
-    }, [expenses]);
+        return Object.entries(categoryTotals).map(([name, value]) => {
+            const percent = (value / totalExpenses) * 100;
+            return {
+                name,
+                value,
+                percent: percent.toFixed(1),
+            };
+        });
+    }, [expenses, totalExpenses]);
 
     // Componente de Legenda Customizado para Acessibilidade
     const renderCustomLegend = (props: any) => {
         const { payload } = props;
         return (
             <ul className="flex flex-wrap justify-center gap-4 mt-6">
-                {payload.map((entry: any, index: number) => (
-                    <li key={`item-${index}`} className="flex items-center gap-2 text-xs font-medium">
-                        <div 
-                            className="h-3 w-3 rounded-full" 
-                            style={{ backgroundColor: entry.color }} 
-                            aria-hidden="true" 
-                        />
-                        <span className="flex items-center">
-                            {entry.value}
-                            <span className="sr-only">, cor {getColorName(index)}</span>
-                        </span>
-                    </li>
-                ))}
+                {payload.map((entry: any, index: number) => {
+                    const itemData = data.find(d => d.name === entry.value);
+                    const percentage = itemData ? itemData.percent : '0';
+                    
+                    return (
+                        <li key={`item-${index}`} className="flex items-center gap-2 text-xs font-medium">
+                            <div 
+                                className="h-3 w-3 rounded-full" 
+                                style={{ backgroundColor: entry.color }} 
+                                aria-hidden="true" 
+                            />
+                            <span className="flex items-center">
+                                <span className="mr-1">{entry.value}</span>
+                                <span className="text-muted-foreground">({percentage}%)</span>
+                                {/* Texto exclusivo para TalkBack/Leitores de tela */}
+                                <span className="sr-only">
+                                    , categoria {entry.value}, cor {getColorName(index)}, representando {percentage} por cento do total.
+                                </span>
+                            </span>
+                        </li>
+                    );
+                })}
             </ul>
         );
     };

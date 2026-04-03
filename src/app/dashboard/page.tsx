@@ -9,6 +9,7 @@ import {
   ArrowDownRight,
   BarChart3,
   Calendar,
+  PiggyBank as PiggyIcon
 } from 'lucide-react';
 import {
     Select,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import type { Income, Expense } from '@/lib/types';
+import type { Income, Expense, PiggyBank } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -51,10 +52,16 @@ export default function DashboardPage() {
     return collection(db, 'users', user.uid, 'expenses');
   }, [db, user]);
 
+  const banksQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'piggy_banks');
+  }, [db, user]);
+
   const { data: incomes, isLoading: isLoadingIncomes } = useCollection<Income>(incomesQuery);
   const { data: expenses, isLoading: isLoadingExpenses } = useCollection<Expense>(expensesQuery);
+  const { data: banks, isLoading: isLoadingBanks } = useCollection<PiggyBank>(banksQuery);
 
-  const isLoading = isLoadingIncomes || isLoadingExpenses;
+  const isLoading = isLoadingIncomes || isLoadingExpenses || isLoadingBanks;
 
   const availableMonths = useMemo(() => {
     if (isLoading) return [selectedMonth];
@@ -71,12 +78,13 @@ export default function DashboardPage() {
   }, [incomes, expenses, isLoading, selectedMonth]);
 
   const stats = useMemo(() => {
-    if (!incomes || !expenses) {
+    if (!incomes || !expenses || !banks) {
       return {
         saldoInicial: 0,
         totalRecebido: 0,
         totalGasto: 0,
         saldoAtual: 0,
+        totalCofrinhos: 0,
         currentMonthExpenses: [],
       };
     }
@@ -94,15 +102,18 @@ export default function DashboardPage() {
     const totalRecebido = selectedMonthIncomes.reduce((acc, i) => acc + i.valor, 0);
     const totalGasto = paidSelectedMonthExpenses.reduce((acc, e) => acc + e.valor, 0);
     const saldoAtual = saldoInicial + totalRecebido - totalGasto;
+    
+    const totalCofrinhos = banks.reduce((acc, b) => acc + b.valorAtual, 0);
 
     return {
       saldoInicial,
       totalRecebido,
       totalGasto,
       saldoAtual,
+      totalCofrinhos,
       currentMonthExpenses: selectedMonthExpenses,
     };
-  }, [incomes, expenses, selectedMonth]);
+  }, [incomes, expenses, banks, selectedMonth]);
 
   return (
     <div className="space-y-8">
@@ -130,9 +141,10 @@ export default function DashboardPage() {
           </div>
         </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {isLoading ? (
           <>
+            <Skeleton className="h-[120px] rounded-2xl" />
             <Skeleton className="h-[120px] rounded-2xl" />
             <Skeleton className="h-[120px] rounded-2xl" />
             <Skeleton className="h-[120px] rounded-2xl" />
@@ -167,6 +179,13 @@ export default function DashboardPage() {
               icon={BarChart3}
               description="Diferença entre E/S"
               color="bg-blue-600 shadow-blue-200"
+            />
+            <StatCard
+              title="Cofrinhos"
+              value={formatCurrency(stats.totalCofrinhos)}
+              icon={PiggyIcon}
+              description="Total guardado"
+              color="bg-violet-600 shadow-violet-200"
             />
           </>
         )}

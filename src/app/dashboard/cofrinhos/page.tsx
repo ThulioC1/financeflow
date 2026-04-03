@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -7,9 +6,12 @@ import {
   Plus, 
   Target, 
   TrendingUp, 
+  TrendingDown,
   MoreHorizontal, 
   Trash2,
-  Coins
+  Coins,
+  ArrowDownCircle,
+  ArrowUpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -63,6 +65,7 @@ const COLORS = [
 export default function CofrinhosPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [selectedBank, setSelectedBank] = useState<PiggyBank | null>(null);
 
   const { user } = useUser();
@@ -112,7 +115,7 @@ export default function CofrinhosPage() {
     const formData = new FormData(e.currentTarget);
     const valor = Number(formData.get('valor'));
 
-    if (isNaN(valor)) return;
+    if (isNaN(valor) || valor <= 0) return;
 
     const ref = doc(db, 'users', user.uid, 'piggy_banks', selectedBank.id);
     updateDocumentNonBlocking(ref, {
@@ -121,6 +124,34 @@ export default function CofrinhosPage() {
 
     toast({ title: `Depositado R$ ${valor.toFixed(2)} no cofrinho!` });
     setIsDepositOpen(false);
+    setSelectedBank(null);
+  };
+
+  const handleWithdraw = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user || !selectedBank) return;
+
+    const formData = new FormData(e.currentTarget);
+    const valor = Number(formData.get('valor'));
+
+    if (isNaN(valor) || valor <= 0) return;
+    
+    if (valor > selectedBank.valorAtual) {
+      toast({ 
+        title: "Saldo insuficiente", 
+        description: "Você não pode retirar um valor maior do que o saldo atual do cofrinho.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const ref = doc(db, 'users', user.uid, 'piggy_banks', selectedBank.id);
+    updateDocumentNonBlocking(ref, {
+      valorAtual: selectedBank.valorAtual - valor
+    });
+
+    toast({ title: `Retirado R$ ${valor.toFixed(2)} do cofrinho!` });
+    setIsWithdrawOpen(false);
     setSelectedBank(null);
   };
 
@@ -212,14 +243,27 @@ export default function CofrinhosPage() {
                     </div>
                     <Progress value={progress} className="h-2" />
                   </div>
-                  <Button 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={() => { setSelectedBank(bank); setIsDepositOpen(true); }}
-                  >
-                    <TrendingUp className="mr-2 h-4 w-4" />
-                    Adicionar Dinheiro
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" 
+                      onClick={() => { setSelectedBank(bank); setIsDepositOpen(true); }}
+                    >
+                      <TrendingUp className="mr-2 h-3 w-3" />
+                      Poupar
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full text-rose-600 border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950/20" 
+                      onClick={() => { setSelectedBank(bank); setIsWithdrawOpen(true); }}
+                      disabled={bank.valorAtual <= 0}
+                    >
+                      <TrendingDown className="mr-2 h-3 w-3" />
+                      Retirar
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -240,24 +284,66 @@ export default function CofrinhosPage() {
         </div>
       )}
 
+      {/* Dialog para Depósito */}
       <Dialog open={isDepositOpen} onOpenChange={setIsDepositOpen}>
         <DialogContent>
           <form onSubmit={handleDeposit}>
             <DialogHeader>
-              <DialogTitle>Adicionar ao Cofrinho: {selectedBank?.nome}</DialogTitle>
-              <DialogDescription>Quanto você quer guardar hoje?</DialogDescription>
+              <DialogTitle>Adicionar ao Cofrinho</DialogTitle>
+              <DialogDescription>Quanto você quer guardar no objetivo "{selectedBank?.nome}"?</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="valor">Valor do Depósito (R$)</Label>
                 <div className="relative">
-                  <Coins className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <ArrowUpCircle className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
                   <Input id="valor" name="valor" type="number" step="0.01" className="pl-9" placeholder="0.00" required autoFocus />
                 </div>
               </div>
             </div>
             <DialogFooter>
               <Button type="submit">Confirmar Depósito</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Retirada */}
+      <Dialog open={isWithdrawOpen} onOpenChange={setIsWithdrawOpen}>
+        <DialogContent>
+          <form onSubmit={handleWithdraw}>
+            <DialogHeader>
+              <DialogTitle>Retirar do Cofrinho</DialogTitle>
+              <DialogDescription>Quanto você quer retirar de "{selectedBank?.nome}"?</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="valor_withdraw">Valor da Retirada (R$)</Label>
+                <div className="relative">
+                  <ArrowDownCircle className="absolute left-3 top-2.5 h-4 w-4 text-rose-500" />
+                  <Input id="valor_withdraw" name="valor" type="number" step="0.01" className="pl-9" placeholder="0.00" required autoFocus />
+                </div>
+                <p className="text-xs text-muted-foreground">Saldo disponível: {formatCurrency(selectedBank?.valorAtual || 0)}</p>
+              </div>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                size="sm" 
+                className="w-full"
+                onClick={() => {
+                  if (!selectedBank || !user) return;
+                  const ref = doc(db, 'users', user.uid, 'piggy_banks', selectedBank.id);
+                  updateDocumentNonBlocking(ref, { valorAtual: 0 });
+                  toast({ title: "Resgate total realizado com sucesso!" });
+                  setIsWithdrawOpen(false);
+                  setSelectedBank(null);
+                }}
+              >
+                Retirar Tudo ({formatCurrency(selectedBank?.valorAtual || 0)})
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button type="submit" variant="destructive">Confirmar Retirada</Button>
             </DialogFooter>
           </form>
         </DialogContent>

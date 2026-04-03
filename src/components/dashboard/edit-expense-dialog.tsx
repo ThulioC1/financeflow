@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -39,7 +38,7 @@ import type { Expense } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-
+import { useRouter } from 'next/navigation';
 
 const expenseSchema = z.object({
   descricao: z.string().min(2, { message: 'Descrição deve ter pelo menos 2 caracteres.' }),
@@ -65,17 +64,18 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
   const { toast } = useToast();
   const db = useFirestore();
   const { user } = useUser();
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof expenseSchema>>({
     resolver: zodResolver(expenseSchema),
   });
 
   useEffect(() => {
-    if (expense) {
+    if (expense && open) {
       form.reset({
         ...expense,
-        dataPagamento: expense.dataPagamento?.toDate(),
-        dataVencimento: expense.dataVencimento?.toDate(),
+        dataPagamento: expense.dataPagamento?.toDate() || null,
+        dataVencimento: expense.dataVencimento?.toDate() || null,
       });
     }
   }, [expense, form, open]);
@@ -126,10 +126,14 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
     operationPromise
         .then(() => {
             toast({
-            title: 'Sucesso!',
-            description: `Despesa ${expense.isProjected ? 'criada' : 'atualizada'}.`,
+              title: 'Sucesso!',
+              description: `Despesa ${expense.isProjected ? 'criada' : 'atualizada'}.`,
             });
             onOpenChange(false);
+            // Refresh para garantir que o scroll da página não trave
+            setTimeout(() => {
+              router.refresh();
+            }, 300);
         })
         .catch((serverError) => {
             console.error("Error saving expense: ", serverError);
@@ -159,153 +163,151 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
             Atualize os detalhes da despesa.
           </DialogDescription>
         </DialogHeader>
-        {expense && (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-               <FormField
-                    control={form.control}
-                    name="descricao"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Descrição</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Ex: Aluguel" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-              <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                      control={form.control}
-                      name="valor"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Valor</FormLabel>
-                          <FormControl>
-                              <Input type="number" step="0.01" placeholder="0,00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                  <FormField
-                      control={form.control}
-                      name="categoria"
-                      render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Categoria</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Selecione" />
-                                  </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                  {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                  </SelectContent>
-                              </Select>
-                              <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="mesReferencia"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Mês de Referência</FormLabel>
-                        <FormControl>
-                            <Input type="month" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                <FormField
-                    control={form.control}
-                    name="dataVencimento"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Data de Vencimento</FormLabel>
-                        <FormControl>
-                            <Input 
-                                type="date" 
-                                {...field}
-                                value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                                onChange={(e) => field.onChange(e.target.valueAsDate)}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-              </div>
-               <div className="flex items-center space-x-4">
-                    <FormField
-                        control={form.control}
-                        name="status"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-2 space-y-0 pt-2">
-                            <FormControl>
-                                <Switch
-                                checked={field.value === 'pago'}
-                                onCheckedChange={(checked) => field.onChange(checked ? 'pago' : 'pendente')}
-                                />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                                Já foi pago?
-                            </FormLabel>
-                            </FormItem>
-                        )}
-                        />
-                    <FormField
-                        control={form.control}
-                        name="dataPagamento"
-                        render={({ field }) => (
-                        <FormItem className={cn('flex flex-col', status !== 'pago' && 'hidden')}>
-                            <FormLabel>Data de Pagamento</FormLabel>
-                            <FormControl>
-                            <Input type="date" 
-                                onChange={(e) => field.onChange(e.target.valueAsDate)}
-                                value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                            />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                </div>
-              <div className="flex items-center justify-between">
-                  <FormField
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
                   control={form.control}
-                  name="recorrente"
+                  name="descricao"
                   render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                      <FormItem>
+                      <FormLabel>Descrição</FormLabel>
                       <FormControl>
-                          <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          />
+                          <Input placeholder="Ex: Aluguel" {...field} />
                       </FormControl>
-                      <FormLabel className="font-normal">
-                          É recorrente?
-                      </FormLabel>
+                      <FormMessage />
                       </FormItem>
                   )}
                   />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="valor"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Valor</FormLabel>
+                        <FormControl>
+                            <Input type="number" step="0.01" placeholder="0,00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                <FormField
+                    control={form.control}
+                    name="categoria"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Categoria</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                  control={form.control}
+                  name="mesReferencia"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Mês de Referência</FormLabel>
+                      <FormControl>
+                          <Input type="month" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+                  />
+              <FormField
+                  control={form.control}
+                  name="dataVencimento"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Data de Vencimento</FormLabel>
+                      <FormControl>
+                          <Input 
+                              type="date" 
+                              {...field}
+                              value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                              onChange={(e) => field.onChange(e.target.valueAsDate)}
+                          />
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+                  )}
+              />
+            </div>
+              <div className="flex items-center space-x-4">
+                  <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0 pt-2">
+                          <FormControl>
+                              <Switch
+                              checked={field.value === 'pago'}
+                              onCheckedChange={(checked) => field.onChange(checked ? 'pago' : 'pendente')}
+                              />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                              Já foi pago?
+                          </FormLabel>
+                          </FormItem>
+                      )}
+                      />
+                  <FormField
+                      control={form.control}
+                      name="dataPagamento"
+                      render={({ field }) => (
+                      <FormItem className={cn('flex flex-col', status !== 'pago' && 'hidden')}>
+                          <FormLabel>Data de Pagamento</FormLabel>
+                          <FormControl>
+                          <Input type="date" 
+                              onChange={(e) => field.onChange(e.target.valueAsDate)}
+                              value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                          />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                  />
               </div>
-              <DialogFooter>
-                <Button type="submit" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Salvar Alterações
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        )}
+            <div className="flex items-center justify-between">
+                <FormField
+                control={form.control}
+                name="recorrente"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                    <FormControl>
+                        <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        />
+                    </FormControl>
+                    <FormLabel className="font-normal">
+                        É recorrente?
+                    </FormLabel>
+                    </FormItem>
+                )}
+                />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

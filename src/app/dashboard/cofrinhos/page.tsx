@@ -52,6 +52,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import type { PiggyBank } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 const COLORS = [
   'bg-blue-500',
@@ -72,6 +73,7 @@ export default function CofrinhosPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
 
   const banksQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -79,6 +81,14 @@ export default function CofrinhosPage() {
   }, [db, user]);
 
   const { data: banks, isLoading } = useCollection<PiggyBank>(banksQuery);
+
+  const handleFinishAction = (message: string) => {
+    toast({ title: message });
+    // Pequeno delay para garantir que o Radix UI limpe o scroll da página antes do refresh
+    setTimeout(() => {
+      router.refresh();
+    }, 300);
+  };
 
   const handleCreateBank = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -105,8 +115,8 @@ export default function CofrinhosPage() {
     };
 
     setDocumentNonBlocking(ref, data, {});
-    toast({ title: "Cofrinho criado com sucesso!" });
     setIsAddOpen(false);
+    handleFinishAction("Cofrinho criado com sucesso!");
   };
 
   const handleEditBank = (e: React.FormEvent<HTMLFormElement>) => {
@@ -125,9 +135,9 @@ export default function CofrinhosPage() {
       valorObjetivo
     });
 
-    toast({ title: "Cofrinho atualizado com sucesso!" });
     setIsEditOpen(false);
     setSelectedBank(null);
+    handleFinishAction("Cofrinho atualizado!");
   };
 
   const handleDeposit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -144,9 +154,9 @@ export default function CofrinhosPage() {
       valorAtual: selectedBank.valorAtual + valor
     });
 
-    toast({ title: `Depositado R$ ${valor.toFixed(2)} no cofrinho!` });
     setIsDepositOpen(false);
     setSelectedBank(null);
+    handleFinishAction(`R$ ${valor.toFixed(2)} guardados!`);
   };
 
   const handleWithdraw = (e: React.FormEvent<HTMLFormElement>) => {
@@ -161,7 +171,7 @@ export default function CofrinhosPage() {
     if (valor > selectedBank.valorAtual) {
       toast({ 
         title: "Saldo insuficiente", 
-        description: "Você não pode retirar um valor maior do que o saldo atual do cofrinho.",
+        description: "Você não pode retirar um valor maior do que o saldo atual.",
         variant: "destructive"
       });
       return;
@@ -172,15 +182,15 @@ export default function CofrinhosPage() {
       valorAtual: selectedBank.valorAtual - valor
     });
 
-    toast({ title: `Retirado R$ ${valor.toFixed(2)} do cofrinho!` });
     setIsWithdrawOpen(false);
     setSelectedBank(null);
+    handleFinishAction(`R$ ${valor.toFixed(2)} retirados.`);
   };
 
   const handleDelete = (id: string) => {
     if (!user) return;
     deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'piggy_banks', id));
-    toast({ title: "Cofrinho removido." });
+    handleFinishAction("Cofrinho removido.");
   };
 
   const formatCurrency = (val: number) => {
@@ -310,100 +320,94 @@ export default function CofrinhosPage() {
       )}
 
       {/* Dialog para Edição */}
-      {selectedBank && isEditOpen && (
-        <Dialog open={isEditOpen} onOpenChange={(open) => { setIsEditOpen(open); if(!open) setSelectedBank(null); }}>
-          <DialogContent>
-            <form onSubmit={handleEditBank}>
-              <DialogHeader>
-                <DialogTitle>Editar Cofrinho</DialogTitle>
-                <DialogDescription>Altere o nome ou a meta do seu objetivo.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit_nome">Nome do Objetivo</Label>
-                  <Input id="edit_nome" name="nome" defaultValue={selectedBank.nome} required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit_valorObjetivo">Valor Meta (R$)</Label>
-                  <Input id="edit_valorObjetivo" name="valorObjetivo" type="number" step="0.01" defaultValue={selectedBank.valorObjetivo} required />
-                </div>
+      <Dialog open={isEditOpen} onOpenChange={(open) => { setIsEditOpen(open); if(!open) setSelectedBank(null); }}>
+        <DialogContent>
+          <form onSubmit={handleEditBank}>
+            <DialogHeader>
+              <DialogTitle>Editar Cofrinho</DialogTitle>
+              <DialogDescription>Altere o nome ou a meta do seu objetivo.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit_nome">Nome do Objetivo</Label>
+                <Input id="edit_nome" name="nome" defaultValue={selectedBank?.nome} required />
               </div>
-              <DialogFooter>
-                <Button type="submit">Salvar Alterações</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+              <div className="grid gap-2">
+                <Label htmlFor="edit_valorObjetivo">Valor Meta (R$)</Label>
+                <Input id="edit_valorObjetivo" name="valorObjetivo" type="number" step="0.01" defaultValue={selectedBank?.valorObjetivo} required />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Salvar Alterações</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog para Depósito */}
-      {selectedBank && isDepositOpen && (
-        <Dialog open={isDepositOpen} onOpenChange={(open) => { setIsDepositOpen(open); if(!open) setSelectedBank(null); }}>
-          <DialogContent>
-            <form onSubmit={handleDeposit}>
-              <DialogHeader>
-                <DialogTitle>Adicionar ao Cofrinho</DialogTitle>
-                <DialogDescription>Quanto você quer guardar no objetivo "{selectedBank.nome}"?</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="valor">Valor do Depósito (R$)</Label>
-                  <div className="relative">
-                    <ArrowUpCircle className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
-                    <Input id="valor" name="valor" type="number" step="0.01" className="pl-9" placeholder="0.00" required autoFocus />
-                  </div>
+      <Dialog open={isDepositOpen} onOpenChange={(open) => { setIsDepositOpen(open); if(!open) setSelectedBank(null); }}>
+        <DialogContent>
+          <form onSubmit={handleDeposit}>
+            <DialogHeader>
+              <DialogTitle>Adicionar ao Cofrinho</DialogTitle>
+              <DialogDescription>Quanto você quer guardar no objetivo "{selectedBank?.nome}"?</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="valor">Valor do Depósito (R$)</Label>
+                <div className="relative">
+                  <ArrowUpCircle className="absolute left-3 top-2.5 h-4 w-4 text-emerald-500" />
+                  <Input id="valor" name="valor" type="number" step="0.01" className="pl-9" placeholder="0.00" required autoFocus />
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="submit">Confirmar Depósito</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+            </div>
+            <DialogFooter>
+              <Button type="submit">Confirmar Depósito</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog para Retirada */}
-      {selectedBank && isWithdrawOpen && (
-        <Dialog open={isWithdrawOpen} onOpenChange={(open) => { setIsWithdrawOpen(open); if(!open) setSelectedBank(null); }}>
-          <DialogContent>
-            <form onSubmit={handleWithdraw}>
-              <DialogHeader>
-                <DialogTitle>Retirar do Cofrinho</DialogTitle>
-                <DialogDescription>Quanto você quer retirar de "{selectedBank.nome}"?</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="valor_withdraw">Valor da Retirada (R$)</Label>
-                  <div className="relative">
-                    <ArrowDownCircle className="absolute left-3 top-2.5 h-4 w-4 text-rose-500" />
-                    <Input id="valor_withdraw" name="valor" type="number" step="0.01" className="pl-9" placeholder="0.00" required autoFocus />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Saldo disponível: {formatCurrency(selectedBank.valorAtual || 0)}</p>
+      <Dialog open={isWithdrawOpen} onOpenChange={(open) => { setIsWithdrawOpen(open); if(!open) setSelectedBank(null); }}>
+        <DialogContent>
+          <form onSubmit={handleWithdraw}>
+            <DialogHeader>
+              <DialogTitle>Retirar do Cofrinho</DialogTitle>
+              <DialogDescription>Quanto você quer retirar de "{selectedBank?.nome}"?</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="valor_withdraw">Valor da Retirada (R$)</Label>
+                <div className="relative">
+                  <ArrowDownCircle className="absolute left-3 top-2.5 h-4 w-4 text-rose-500" />
+                  <Input id="valor_withdraw" name="valor" type="number" step="0.01" className="pl-9" placeholder="0.00" required autoFocus />
                 </div>
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => {
-                    if (!selectedBank || !user) return;
-                    const ref = doc(db, 'users', user.uid, 'piggy_banks', selectedBank.id);
-                    updateDocumentNonBlocking(ref, { valorAtual: 0 });
-                    toast({ title: "Resgate total realizado com sucesso!" });
-                    setIsWithdrawOpen(false);
-                    setSelectedBank(null);
-                  }}
-                >
-                  Retirar Tudo ({formatCurrency(selectedBank.valorAtual || 0)})
-                </Button>
+                <p className="text-xs text-muted-foreground">Saldo disponível: {selectedBank ? formatCurrency(selectedBank.valorAtual) : 'R$ 0,00'}</p>
               </div>
-              <DialogFooter>
-                <Button type="submit" variant="destructive">Confirmar Retirada</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+              <Button 
+                type="button" 
+                variant="secondary" 
+                size="sm" 
+                className="w-full"
+                onClick={() => {
+                  if (!selectedBank || !user) return;
+                  const ref = doc(db, 'users', user.uid, 'piggy_banks', selectedBank.id);
+                  updateDocumentNonBlocking(ref, { valorAtual: 0 });
+                  setIsWithdrawOpen(false);
+                  setSelectedBank(null);
+                  handleFinishAction("Resgate total realizado!");
+                }}
+              >
+                Retirar Tudo ({selectedBank ? formatCurrency(selectedBank.valorAtual) : 'R$ 0,00'})
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button type="submit" variant="destructive">Confirmar Retirada</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

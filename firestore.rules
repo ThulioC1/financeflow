@@ -46,6 +46,10 @@ service cloud.firestore {
         allow get, list, create, update, delete: if isOwner(userId);
       }
 
+      match /piggy_banks/{bankId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
+
       match /balances/{balanceId} {
         allow get, list, create, update, delete: if isOwner(userId);
       }

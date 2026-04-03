@@ -38,28 +38,43 @@ service cloud.firestore {
       allow update: if isUpdatingOwnProfile(userId);
       allow delete: if isExistingOwner(userId);
 
+      // Regras para subcoleções de finanças e utilitários
+      // Implementamos uma verificação mais específica para criação e atualização
+      
       match /incomes/{incomeId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
+        allow create: if isCreatingOwnSubcollectionDoc(userId);
+        allow update: if isUpdatingOwnSubcollectionDoc(userId);
       }
 
       match /expenses/{expenseId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
+        allow create: if isCreatingOwnSubcollectionDoc(userId);
+        allow update: if isUpdatingOwnSubcollectionDoc(userId);
       }
 
       match /piggy_banks/{bankId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
+        allow create: if isCreatingOwnSubcollectionDoc(userId);
+        allow update: if isUpdatingOwnSubcollectionDoc(userId);
       }
 
       match /balances/{balanceId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
+        allow create: if isCreatingOwnSubcollectionDoc(userId);
+        allow update: if isUpdatingOwnSubcollectionDoc(userId);
       }
 
       match /events/{eventId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
+        allow create: if isCreatingOwnSubcollectionDoc(userId);
+        allow update: if isUpdatingOwnSubcollectionDoc(userId);
       }
 
       match /external_calendars/{calendarId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
+        allow create: if isCreatingOwnSubcollectionDoc(userId);
+        allow update: if isUpdatingOwnSubcollectionDoc(userId);
       }
     }
   }

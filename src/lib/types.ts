@@ -38,6 +38,16 @@ export interface Expense {
   isProjected?: boolean;
 }
 
+export interface PiggyBank {
+  id: string;
+  userId: string;
+  nome: string;
+  valorObjetivo: number;
+  valorAtual: number;
+  cor: string;
+  createdAt: Timestamp;
+}
+
 export interface Balance {
   id: string;
   userId: string;

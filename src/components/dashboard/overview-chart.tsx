@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -22,6 +23,12 @@ const COLORS = [
     '#2dd4bf', // Teal
 ];
 
+// Helper para obter o nome da cor amigável para acessibilidade
+const getColorName = (index: number) => {
+    const names = ['Azul', 'Verde', 'Índigo', 'Violeta', 'Ciano', 'Âmbar', 'Rosa', 'Ciano Escuro'];
+    return names[index % names.length];
+};
+
 export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
     const data = useMemo(() => {
         if (!expenses) return [];
@@ -40,6 +47,28 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
             value,
         }));
     }, [expenses]);
+
+    // Componente de Legenda Customizado para Acessibilidade
+    const renderCustomLegend = (props: any) => {
+        const { payload } = props;
+        return (
+            <ul className="flex flex-wrap justify-center gap-4 mt-6">
+                {payload.map((entry: any, index: number) => (
+                    <li key={`item-${index}`} className="flex items-center gap-2 text-xs font-medium">
+                        <div 
+                            className="h-3 w-3 rounded-full" 
+                            style={{ backgroundColor: entry.color }} 
+                            aria-hidden="true" 
+                        />
+                        <span className="flex items-center">
+                            {entry.value}
+                            <span className="sr-only">, cor {getColorName(index)}</span>
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        );
+    };
 
 
   return (
@@ -72,9 +101,7 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
               />
               <Legend 
                 verticalAlign="bottom" 
-                height={36} 
-                iconType="circle" 
-                wrapperStyle={{fontSize: "12px", paddingTop: "20px"}}
+                content={renderCustomLegend}
               />
               <Pie
                 data={data}

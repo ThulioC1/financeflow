@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -49,7 +50,7 @@ const expenseSchema = z.object({
   dataVencimento: z.coerce.date().optional().nullable(),
 });
 
-const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Outros'];
+const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Outros'];
 
 export function AddExpenseDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -72,16 +73,13 @@ export function AddExpenseDialog({ children }: { children: React.ReactNode }) {
     },
   });
 
-  // Watch for status changes to set dataPagamento
   const status = form.watch('status');
   useEffect(() => {
     if (status === 'pago') {
-      // If date is not set, set it to today
       if (!form.getValues('dataPagamento')) {
         form.setValue('dataPagamento', new Date());
       }
     } else {
-      // If status is pendente, clear the date
       form.setValue('dataPagamento', null);
     }
   }, [status, form]);

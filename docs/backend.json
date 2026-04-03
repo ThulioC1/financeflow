@@ -162,6 +162,22 @@
         "createdAt"
       ]
     },
+    "PiggyBank": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Cofrinho",
+      "type": "object",
+      "description": "Representa uma meta de economia do usuário.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "nome": { "type": "string" },
+        "valorObjetivo": { "type": "number" },
+        "valorAtual": { "type": "number" },
+        "cor": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "nome", "valorObjetivo", "valorAtual", "createdAt"]
+    },
     "Balance": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Saldo",
@@ -282,6 +298,16 @@
             "$ref": "#/backend/entities/Expense"
           },
           "description": "Armazena entradas de despesa."
+        }
+      },
+      {
+        "path": "/users/{userId}/piggy_banks/{bankId}",
+        "definition": {
+          "entityName": "PiggyBank",
+          "schema": {
+            "$ref": "#/backend/entities/PiggyBank"
+          },
+          "description": "Armazena metas de economia (cofrinhos)."
         }
       },
       {

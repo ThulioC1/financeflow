@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -51,7 +52,7 @@ const expenseSchema = z.object({
   dataVencimento: z.coerce.date().optional().nullable(),
 });
 
-const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Outros'];
+const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Outros'];
 
 interface EditExpenseDialogProps {
   expense: Expense | null;
@@ -107,7 +108,6 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
     let operationPromise;
 
     if (expense.isProjected) {
-        // This is a projected expense, so we need to create a new document
         const newId = crypto.randomUUID();
         const dataToCreate = {
             ...dataPayload,
@@ -119,7 +119,6 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
         const newExpenseRef = doc(db, 'users', user.uid, 'expenses', newId);
         operationPromise = setDoc(newExpenseRef, dataToCreate);
     } else {
-        // This is a regular expense, so we update it
         const expenseDocRef = doc(db, 'users', user.uid, 'expenses', expense.id);
         operationPromise = updateDoc(expenseDocRef, dataPayload as any);
     }
@@ -137,7 +136,7 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
             toast({ title: 'Erro', description: 'Não foi possível salvar a despesa.', variant: 'destructive' });
             
             const docRef = expense.isProjected 
-              ? doc(db, 'users', user.uid, 'expenses', 'new-id-placeholder') // Path for error reporting
+              ? doc(db, 'users', user.uid, 'expenses', 'new-id-placeholder')
               : doc(db, 'users', user.uid, 'expenses', expense.id);
 
             errorEmitter.emit('permission-error', new FirestorePermissionError({

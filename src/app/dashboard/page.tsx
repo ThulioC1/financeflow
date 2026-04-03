@@ -78,41 +78,41 @@ export default function DashboardPage() {
   }, [incomes, expenses, isLoading, selectedMonth]);
 
   const stats = useMemo(() => {
-    if (!incomes || !expenses || !banks) {
-      return {
-        saldoInicial: 0,
-        totalRecebido: 0,
-        totalGasto: 0,
-        saldoAtual: 0,
-        totalCofrinhos: 0,
-        currentMonthExpenses: [],
-      };
+    const result = {
+      saldoInicial: 0,
+      totalRecebido: 0,
+      totalGasto: 0,
+      saldoAtual: 0,
+      totalCofrinhos: 0,
+      currentMonthExpenses: [] as Expense[],
+    };
+
+    // Soma dos cofrinhos é independente do mês e de outras coleções
+    if (banks) {
+      result.totalCofrinhos = banks.reduce((acc, b) => acc + (Number(b.valorAtual) || 0), 0);
+    }
+
+    if (!incomes || !expenses) {
+      return result;
     }
     
     const previousIncomes = incomes.filter(i => i.mesReferencia < selectedMonth && i.status === 'pago');
     const previousExpenses = expenses.filter(e => e.mesReferencia < selectedMonth && e.status === 'pago');
     const totalPreviousIncome = previousIncomes.reduce((acc, i) => acc + i.valor, 0);
     const totalPreviousExpense = previousExpenses.reduce((acc, e) => acc + e.valor, 0);
-    const saldoInicial = totalPreviousIncome - totalPreviousExpense;
+    
+    result.saldoInicial = totalPreviousIncome - totalPreviousExpense;
 
     const selectedMonthIncomes = incomes.filter(i => i.mesReferencia === selectedMonth && i.status === 'pago');
     const selectedMonthExpenses = expenses.filter(e => e.mesReferencia === selectedMonth);
     const paidSelectedMonthExpenses = selectedMonthExpenses.filter(e => e.status === 'pago');
 
-    const totalRecebido = selectedMonthIncomes.reduce((acc, i) => acc + i.valor, 0);
-    const totalGasto = paidSelectedMonthExpenses.reduce((acc, e) => acc + e.valor, 0);
-    const saldoAtual = saldoInicial + totalRecebido - totalGasto;
-    
-    const totalCofrinhos = banks.reduce((acc, b) => acc + b.valorAtual, 0);
+    result.totalRecebido = selectedMonthIncomes.reduce((acc, i) => acc + i.valor, 0);
+    result.totalGasto = paidSelectedMonthExpenses.reduce((acc, e) => acc + e.valor, 0);
+    result.saldoAtual = result.saldoInicial + result.totalRecebido - result.totalGasto;
+    result.currentMonthExpenses = selectedMonthExpenses;
 
-    return {
-      saldoInicial,
-      totalRecebido,
-      totalGasto,
-      saldoAtual,
-      totalCofrinhos,
-      currentMonthExpenses: selectedMonthExpenses,
-    };
+    return result;
   }, [incomes, expenses, banks, selectedMonth]);
 
   return (

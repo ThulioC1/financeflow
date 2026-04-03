@@ -130,10 +130,12 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
               description: `Despesa ${expense.isProjected ? 'criada' : 'atualizada'}.`,
             });
             onOpenChange(false);
-            // Refresh para garantir que o scroll da página não trave
+            // Refresh imediato e limpeza manual de scroll caso o Radix trave
             setTimeout(() => {
+              document.body.style.pointerEvents = 'auto';
+              document.body.style.overflow = 'auto';
               router.refresh();
-            }, 300);
+            }, 100);
         })
         .catch((serverError) => {
             console.error("Error saving expense: ", serverError);

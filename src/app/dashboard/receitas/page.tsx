@@ -38,6 +38,7 @@ import {
     SelectValue,
   } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { useRouter } from 'next/navigation';
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -45,7 +46,6 @@ const formatCurrency = (value: number) => {
 
 const formatDate = (date: Timestamp | undefined) => {
     if (!date) return '-';
-    // Firebase timestamps need to be converted to Date objects
     const d = date.toDate();
     return d.toLocaleDateString('pt-BR');
 }
@@ -64,6 +64,7 @@ export default function ReceitasPage() {
     const db = useFirestore();
     const { user } = useUser();
     const { toast } = useToast();
+    const router = useRouter();
 
     const incomesQuery = useMemoFirebase(() => {
         if (!user) return null;
@@ -71,6 +72,14 @@ export default function ReceitasPage() {
     }, [db, user]);
 
     const { data: allIncomes, isLoading } = useCollection<Income>(incomesQuery);
+
+    const handleRefresh = () => {
+        setTimeout(() => {
+            document.body.style.pointerEvents = 'auto';
+            document.body.style.overflow = 'auto';
+            router.refresh();
+        }, 100);
+    };
 
     const availableMonths = useMemo(() => {
         if (!allIncomes) return [selectedMonth];
@@ -95,6 +104,7 @@ export default function ReceitasPage() {
             description: 'Sua receita foi removida com sucesso.'
         });
         setDeletingIncomeId(null);
+        handleRefresh();
     };
 
   return (
@@ -103,7 +113,12 @@ export default function ReceitasPage() {
       <EditIncomeDialog
           income={editingIncome}
           open={!!editingIncome}
-          onOpenChange={(open) => !open && setEditingIncome(null)}
+          onOpenChange={(open) => {
+              if (!open) {
+                  setEditingIncome(null);
+                  handleRefresh();
+              }
+          }}
       />
     )}
     

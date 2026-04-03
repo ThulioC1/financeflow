@@ -84,10 +84,12 @@ export default function CofrinhosPage() {
 
   const handleFinishAction = (message: string) => {
     toast({ title: message });
-    // Pequeno delay para garantir que o Radix UI limpe o scroll da página antes do refresh
+    // Refresh imediato e limpeza manual de scroll caso o Radix trave
     setTimeout(() => {
+      document.body.style.pointerEvents = 'auto';
+      document.body.style.overflow = 'auto';
       router.refresh();
-    }, 300);
+    }, 100);
   };
 
   const handleCreateBank = (e: React.FormEvent<HTMLFormElement>) => {

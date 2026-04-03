@@ -39,6 +39,7 @@ import { EditExpenseDialog } from "@/components/dashboard/edit-expense-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useRouter } from 'next/navigation';
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -62,10 +63,10 @@ export default function DespesasPage() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
 
-
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const router = useRouter();
 
   const expensesQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -73,6 +74,14 @@ export default function DespesasPage() {
   }, [db, user]);
 
   const { data: allExpenses, isLoading } = useCollection<Expense>(expensesQuery);
+
+  const handleRefresh = () => {
+    setTimeout(() => {
+        document.body.style.pointerEvents = 'auto';
+        document.body.style.overflow = 'auto';
+        router.refresh();
+    }, 100);
+  };
 
   const availableMonths = useMemo(() => {
     if (!allExpenses) return [selectedMonth];
@@ -176,6 +185,7 @@ export default function DespesasPage() {
         description: 'Sua despesa foi removida com sucesso.'
     });
     setDeletingExpenseId(null);
+    handleRefresh();
   };
 
   const handleMarkAsPaid = (expense: Expense) => {
@@ -214,6 +224,7 @@ export default function DespesasPage() {
         title: 'Sucesso!',
         description: 'Despesa marcada como paga.',
     });
+    handleRefresh();
   };
 
   return (
@@ -222,7 +233,12 @@ export default function DespesasPage() {
       <EditExpenseDialog
           expense={editingExpense}
           open={!!editingExpense}
-          onOpenChange={(open) => !open && setEditingExpense(null)}
+          onOpenChange={(open) => {
+              if (!open) {
+                setEditingExpense(null);
+                handleRefresh();
+              }
+          }}
       />
     )}
     

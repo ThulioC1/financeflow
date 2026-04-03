@@ -52,7 +52,7 @@ const expenseSchema = z.object({
   dataVencimento: z.coerce.date().optional().nullable(),
 });
 
-const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Outros'];
+const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Cartão', 'Outros'];
 
 interface EditExpenseDialogProps {
   expense: Expense | null;

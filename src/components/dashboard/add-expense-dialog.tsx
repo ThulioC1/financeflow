@@ -50,7 +50,7 @@ const expenseSchema = z.object({
   dataVencimento: z.coerce.date().optional().nullable(),
 });
 
-const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Outros'];
+const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Cartão', 'Outros'];
 
 export function AddExpenseDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);

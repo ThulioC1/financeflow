@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -100,12 +99,14 @@ export default function ReceitasPage() {
 
   return (
     <>
-    <EditIncomeDialog
-        key={editingIncome?.id}
-        income={editingIncome}
-        open={!!editingIncome}
-        onOpenChange={(open) => !open && setEditingIncome(null)}
-    />
+    {editingIncome && (
+      <EditIncomeDialog
+          income={editingIncome}
+          open={!!editingIncome}
+          onOpenChange={(open) => !open && setEditingIncome(null)}
+      />
+    )}
+    
     <AlertDialog
         open={!!deletingIncomeId}
         onOpenChange={(open) => !open && setDeletingIncomeId(null)}

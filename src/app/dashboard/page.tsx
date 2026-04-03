@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -87,7 +88,7 @@ export default function DashboardPage() {
       currentMonthExpenses: [] as Expense[],
     };
 
-    // Soma dos cofrinhos é independente do mês e de outras coleções
+    // Soma dos cofrinhos é independente do mês
     if (banks) {
       result.totalCofrinhos = banks.reduce((acc, b) => acc + (Number(b.valorAtual) || 0), 0);
     }
@@ -109,7 +110,9 @@ export default function DashboardPage() {
 
     result.totalRecebido = selectedMonthIncomes.reduce((acc, i) => acc + i.valor, 0);
     result.totalGasto = paidSelectedMonthExpenses.reduce((acc, e) => acc + e.valor, 0);
-    result.saldoAtual = result.saldoInicial + result.totalRecebido - result.totalGasto;
+    
+    // O saldo atual (Livre) desconta o que está guardado nos cofrinhos
+    result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
     result.currentMonthExpenses = selectedMonthExpenses;
 
     return result;
@@ -119,7 +122,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div className="space-y-1">
-              <h1 className="text-3xl font-extrabold tracking-tight">Visão Geral</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Visão Geral</h1>
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Calendar className="h-3.5 w-3.5" />
                   Relatório financeiro de <span className="font-bold text-foreground capitalize">{formatMonth(selectedMonth)}</span>.
@@ -153,10 +156,10 @@ export default function DashboardPage() {
         ) : (
           <>
             <StatCard
-              title="Saldo Atual"
+              title="Saldo Livre"
               value={formatCurrency(stats.saldoAtual)}
               icon={Wallet}
-              description="Saldo final projetado"
+              description="Disponível após cofrinhos"
               color="bg-primary shadow-primary/20"
             />
             <StatCard
@@ -184,7 +187,7 @@ export default function DashboardPage() {
               title="Cofrinhos"
               value={formatCurrency(stats.totalCofrinhos)}
               icon={PiggyIcon}
-              description="Total guardado"
+              description="Total reservado"
               color="bg-violet-600 shadow-violet-200"
             />
           </>

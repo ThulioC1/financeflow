@@ -1,4 +1,3 @@
-
 import { AuthForm } from '@/components/auth/auth-form';
 import { Logo } from '@/components/icons';
 
@@ -15,10 +14,10 @@ export default function LoginPage() {
             <Logo className="h-12 w-12" />
           </div>
           <h1 className="font-headline text-4xl font-extrabold tracking-tight text-slate-900">
-            Fin<span className="text-primary">Pulse</span>
+            Ca$h<span className="text-primary">Ord</span>
           </h1>
           <p className="mt-2 text-balance text-slate-500">
-            A gestão inteligente que o seu dinheiro merece.
+            A ordem que o seu dinheiro merece.
           </p>
         </div>
         
@@ -27,7 +26,7 @@ export default function LoginPage() {
         </div>
 
         <footer className="mt-8 text-center text-xs text-slate-400">
-          <p>FinPulse &copy; {new Date().getFullYear()} • Powered by Thulio Costa & AI</p>
+          <p>Ca$hOrd &copy; {new Date().getFullYear()} • Powered by Thulio Costa & AI</p>
         </footer>
       </div>
     </div>

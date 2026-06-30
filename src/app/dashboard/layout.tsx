@@ -1,4 +1,3 @@
-
 'use client';
 
 import { MainNav } from '@/components/layout/main-nav';
@@ -39,7 +38,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-3">
             <Logo className="h-8 w-8 shrink-0 rounded-lg shadow-lg" />
             <span className="font-headline text-xl font-bold tracking-tight text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              Fin<span className="text-primary">Pulse</span>
+              Ca$h<span className="text-primary">Ord</span>
             </span>
           </div>
         </SidebarHeader>

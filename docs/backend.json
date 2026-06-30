@@ -1,11 +1,10 @@
-
 {
   "entities": {
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Representa um usuário do aplicativo FinPulse.",
+      "description": "Representa um usuário do aplicativo Ca$hOrd.",
       "properties": {
         "uid": {
           "type": "string",

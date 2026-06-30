@@ -12,16 +12,22 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
       {...props}
     >
       <rect width="40" height="40" rx="10" fill="url(#logo-gradient)" />
-      {/* Desenho estilizado inspirado na imagem: F/C moderno com dinamismo */}
+      {/* Símbolo Ca$hOrd: Um 'C' estilizado com barras de '$' e um ponto de foco/ordem */}
       <path 
-        d="M12 28V12H28M12 20H24M18 28L28 18" 
+        d="M26 14C24.5 12.5 22.5 12 20 12C14.5 12 11 15.5 11 20C11 24.5 14.5 28 20 28C22.5 28 24.5 27.5 26 26" 
         stroke="white" 
-        strokeWidth="3" 
+        strokeWidth="3.5" 
         strokeLinecap="round" 
         strokeLinejoin="round"
       />
-      {/* Ponto verde característico */}
-      <circle cx="28" cy="18" r="3" fill="#10b981" />
+      <path 
+        d="M20 9V13M20 27V31" 
+        stroke="white" 
+        strokeWidth="2.5" 
+        strokeLinecap="round"
+      />
+      {/* Ponto verde que simboliza a 'Ordem' e o Saldo Positivo */}
+      <circle cx="29" cy="20" r="3.5" fill="#10b981" stroke="white" strokeWidth="1"/>
       <defs>
         <linearGradient id="logo-gradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
           <stop stopColor="#3b82f6" />

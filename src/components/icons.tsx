@@ -11,6 +11,7 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
       {...props}
     >
       <rect width="40" height="40" rx="10" fill="url(#logo-gradient)" />
+      {/* Um desenho que sugere organização ($ dentro de uma moldura de ordem) */}
       <path 
         d="M12 28V12H28M12 20H24M18 28L28 18" 
         stroke="white" 

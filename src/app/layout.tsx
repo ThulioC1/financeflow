@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import { FirebaseClientProvider } from '@/firebase';
 import { Toaster } from '@/components/ui/toaster';

@@ -1,3 +1,4 @@
+
 import type { SVGProps } from 'react';
 
 export function Logo(props: SVGProps<SVGSVGElement>) {
@@ -11,7 +12,7 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
       {...props}
     >
       <rect width="40" height="40" rx="10" fill="url(#logo-gradient)" />
-      {/* Um desenho que sugere organização ($ dentro de uma moldura de ordem) */}
+      {/* Desenho estilizado inspirado na imagem: F/C moderno com dinamismo */}
       <path 
         d="M12 28V12H28M12 20H24M18 28L28 18" 
         stroke="white" 
@@ -19,6 +20,7 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
         strokeLinecap="round" 
         strokeLinejoin="round"
       />
+      {/* Ponto verde característico */}
       <circle cx="28" cy="18" r="3" fill="#10b981" />
       <defs>
         <linearGradient id="logo-gradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">

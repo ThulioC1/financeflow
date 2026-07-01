@@ -1,4 +1,3 @@
-
 'use client';
 
 import { MainNav } from '@/components/layout/main-nav';
@@ -33,7 +32,6 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <NotificationChecker />
       <Sidebar collapsible="icon" className="border-r border-sidebar-border">
         <SidebarHeader className="flex h-16 items-center px-4">
           <div className="flex items-center gap-3">
@@ -77,6 +75,7 @@ export default function DashboardLayout({
           </div>
         </header>
         <main className="flex-1 p-4 pb-24 md:p-6 lg:p-8 md:pb-8">
+          <NotificationChecker />
           {children}
         </main>
         <BottomNav />

@@ -12,21 +12,17 @@ interface OverviewChartProps {
   isLoading: boolean;
 }
 
-const COLORS = [
-    '#3b82f6', // Primary Blue
-    '#10b981', // Success Green
-    '#6366f1', // Indigo
-    '#8b5cf6', // Violet
-    '#06b6d4', // Cyan
-    '#f59e0b', // Amber
-    '#ec4899', // Pink
-    '#2dd4bf', // Teal
-];
-
-// Helper para obter o nome da cor amigável para acessibilidade
-const getColorName = (index: number) => {
-    const names = ['Azul', 'Verde', 'Índigo', 'Violeta', 'Ciano', 'Âmbar', 'Rosa', 'Ciano Escuro'];
-    return names[index % names.length];
+const CATEGORY_COLORS: Record<string, string> = {
+  'Moradia': '#3b82f6',
+  'Alimentação': '#10b981',
+  'Transporte': '#6366f1',
+  'Contas': '#8b5cf6',
+  'Lazer': '#06b6d4',
+  'Saúde': '#f59e0b',
+  'Compras': '#ec4899',
+  'Pet': '#2dd4bf',
+  'Cartão': '#f43f5e',
+  'Outros': '#71717a',
 };
 
 export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
@@ -57,7 +53,6 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
         });
     }, [expenses, totalExpenses]);
 
-    // Componente de Legenda Customizado para Acessibilidade
     const renderCustomLegend = (props: any) => {
         const { payload } = props;
         return (
@@ -76,10 +71,6 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
                             <span className="flex items-center">
                                 <span className="mr-1">{entry.value}</span>
                                 <span className="text-muted-foreground">({percentage}%)</span>
-                                {/* Texto exclusivo para TalkBack/Leitores de tela */}
-                                <span className="sr-only">
-                                    , categoria {entry.value}, cor {getColorName(index)}, representando {percentage} por cento do total.
-                                </span>
                             </span>
                         </li>
                     );
@@ -109,12 +100,6 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
                   boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
                   color: "hsl(var(--popover-foreground))",
                 }}
-                itemStyle={{
-                  color: "hsl(var(--popover-foreground))",
-                }}
-                labelStyle={{
-                  color: "hsl(var(--popover-foreground))",
-                }}
                 formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               />
               <Legend 
@@ -131,8 +116,12 @@ export function OverviewChart({ expenses, isLoading }: OverviewChartProps) {
                 dataKey="value"
                 nameKey="name"
               >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="transparent" />
+                {data.map((entry) => (
+                  <Cell 
+                    key={`cell-${entry.name}`} 
+                    fill={CATEGORY_COLORS[entry.name] || '#71717a'} 
+                    stroke="transparent" 
+                  />
                 ))}
               </Pie>
             </PieChart>

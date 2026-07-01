@@ -11,7 +11,6 @@ import {
   ArrowDownRight,
   BarChart3,
   Calendar,
-  PiggyBank as PiggyIcon,
   Clock
 } from 'lucide-react';
 import {
@@ -28,7 +27,6 @@ import {
   XAxis, 
   YAxis, 
   Tooltip as RechartsTooltip,
-  Cell
 } from 'recharts';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -47,6 +45,21 @@ const formatMonth = (month: string) => {
     const [year, m] = month.split('-');
     const date = new Date(Number(year), Number(m) - 1);
     return date.toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+};
+
+// Mapeamento global de cores por categoria para consistência entre gráficos
+const CATEGORIES = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Cartão', 'Outros'];
+const CATEGORY_COLORS: Record<string, string> = {
+  'Moradia': '#3b82f6',
+  'Alimentação': '#10b981',
+  'Transporte': '#6366f1',
+  'Contas': '#8b5cf6',
+  'Lazer': '#06b6d4',
+  'Saúde': '#f59e0b',
+  'Compras': '#ec4899',
+  'Pet': '#2dd4bf',
+  'Cartão': '#f43f5e',
+  'Outros': '#71717a',
 };
 
 export default function DashboardPage() {
@@ -98,8 +111,9 @@ export default function DashboardPage() {
       saldoAtual: 0,
       totalCofrinhos: 0,
       currentMonthExpenses: [] as Expense[],
-      dailyExpenses: [] as { day: number; valor: number }[],
+      dailyExpenses: [] as any[],
       expensesByCategory: [] as { category: string; amount: number }[],
+      foundCategories: [] as string[],
     };
 
     if (banks) {
@@ -120,7 +134,6 @@ export default function DashboardPage() {
 
     result.totalRecebido = selectedMonthIncomes.reduce((acc, i) => acc + i.valor, 0);
     
-    // Totais separados por status
     result.totalGasto = selectedMonthExpenses
       .filter(e => e.status === 'pago')
       .reduce((acc, e) => acc + e.valor, 0);
@@ -129,26 +142,27 @@ export default function DashboardPage() {
       .filter(e => e.status === 'pendente')
       .reduce((acc, e) => acc + e.valor, 0);
 
-    // Saldo Livre = Dinheiro real que sobrou (Saldo Inicial + Recebido - Gasto Efetivado) - Cofrinhos
-    // As despesas pendentes NÃO são subtraídas aqui, pois o dinheiro ainda está na conta.
     result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
     
     result.currentMonthExpenses = selectedMonthExpenses;
 
-    // Cálculo diário (Gráfico mostra tudo do mês para planejamento)
-    const dailyMap: Record<number, number> = {};
+    // Cálculo diário com suporte a pilhas por categoria
+    const dailyMap: Record<number, any> = {};
+    const categoriesSet = new Set<string>();
+    
     selectedMonthExpenses.forEach(exp => {
       const date = exp.dataPagamento?.toDate() || exp.dataVencimento?.toDate() || exp.createdAt?.toDate();
       if (date) {
         const day = date.getDate();
-        dailyMap[day] = (dailyMap[day] || 0) + exp.valor;
+        if (!dailyMap[day]) dailyMap[day] = { day };
+        dailyMap[day][exp.categoria] = (dailyMap[day][exp.categoria] || 0) + exp.valor;
+        categoriesSet.add(exp.categoria);
       }
     });
-    result.dailyExpenses = Object.entries(dailyMap)
-      .map(([day, valor]) => ({ day: parseInt(day), valor }))
-      .sort((a, b) => a.day - b.day);
+    
+    result.dailyExpenses = Object.values(dailyMap).sort((a, b) => a.day - b.day);
+    result.foundCategories = Array.from(categoriesSet);
 
-    // Categorias para o Advisor
     const categoryMap: Record<string, number> = {};
     selectedMonthExpenses.forEach(exp => {
       categoryMap[exp.categoria] = (categoryMap[exp.categoria] || 0) + exp.valor;
@@ -196,11 +210,11 @@ export default function DashboardPage() {
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
         ) : (
           <>
-            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Dinheiro em conta menos cofrinhos" color="bg-primary shadow-primary/20" />
+            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Dinheiro disponível hoje" color="bg-primary shadow-primary/20" />
             <StatCard title="Receitas" value={formatCurrency(stats.totalRecebido)} icon={ArrowUpRight} description="Total recebido" color="bg-emerald-500 shadow-emerald-200" />
             <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total pago" color="bg-rose-500 shadow-rose-200" />
             <StatCard title="A Pagar" value={formatCurrency(stats.totalPendente)} icon={Clock} description="Aguardando pagamento" color="bg-amber-500 shadow-amber-200" />
-            <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Entradas - Saídas Pagas" color="bg-blue-600 shadow-blue-200" />
+            <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Entradas - Pagos" color="bg-blue-600 shadow-blue-200" />
           </>
         )}
       </div>
@@ -212,7 +226,7 @@ export default function DashboardPage() {
           <Card className="border-slate-200 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
-              <CardDescription>Consolidado de gastos (Pagos e Pendentes) por dia.</CardDescription>
+              <CardDescription>Consolidado de gastos por categoria e dia.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               {isLoading ? (
@@ -228,11 +242,15 @@ export default function DashboardPage() {
                         labelFormatter={(label) => `Dia ${label}`}
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                       />
-                      <Bar dataKey="valor" radius={[4, 4, 0, 0]}>
-                        {stats.dailyExpenses.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill="var(--primary)" fillOpacity={0.8} />
-                        ))}
-                      </Bar>
+                      {stats.foundCategories.map((category) => (
+                        <Bar 
+                          key={category} 
+                          dataKey={category} 
+                          stackId="a" 
+                          fill={CATEGORY_COLORS[category] || '#71717a'} 
+                          radius={[0, 0, 0, 0]}
+                        />
+                      ))}
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

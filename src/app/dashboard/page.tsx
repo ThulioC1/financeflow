@@ -115,16 +115,17 @@ export default function DashboardPage() {
 
     const selectedMonthIncomes = incomes.filter(i => i.mesReferencia === selectedMonth && i.status === 'pago');
     const selectedMonthExpenses = expenses.filter(e => e.mesReferencia === selectedMonth);
-    const paidSelectedMonthExpenses = selectedMonthExpenses.filter(e => e.status === 'pago');
 
     result.totalRecebido = selectedMonthIncomes.reduce((acc, i) => acc + i.valor, 0);
-    result.totalGasto = paidSelectedMonthExpenses.reduce((acc, e) => acc + e.valor, 0);
+    // Mudança: Consideramos todas as despesas do mês no total de "Gasto planejado/atual" para visão geral
+    result.totalGasto = selectedMonthExpenses.reduce((acc, e) => acc + e.valor, 0);
     result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
     result.currentMonthExpenses = selectedMonthExpenses;
 
-    // Cálculo diário
+    // Cálculo diário (Usando todas as despesas do mês para o gráfico não ficar vazio)
     const dailyMap: Record<number, number> = {};
-    paidSelectedMonthExpenses.forEach(exp => {
+    selectedMonthExpenses.forEach(exp => {
+      // Prioridade de data: Pagamento > Vencimento > Criação
       const date = exp.dataPagamento?.toDate() || exp.dataVencimento?.toDate() || exp.createdAt?.toDate();
       if (date) {
         const day = date.getDate();
@@ -135,7 +136,7 @@ export default function DashboardPage() {
       .map(([day, valor]) => ({ day: parseInt(day), valor }))
       .sort((a, b) => a.day - b.day);
 
-    // Categorias para o Advisor
+    // Categorias para o Advisor (sempre todas do mês)
     const categoryMap: Record<string, number> = {};
     selectedMonthExpenses.forEach(exp => {
       categoryMap[exp.categoria] = (categoryMap[exp.categoria] || 0) + exp.valor;
@@ -146,10 +147,9 @@ export default function DashboardPage() {
   }, [incomes, expenses, banks, selectedMonth]);
 
   const history = useMemo(() => {
-    // Gerar um histórico simples para o advisor
     return availableMonths.slice(1, 4).map(m => ({
       month: m,
-      balance: 0 // Placeholder simplificado
+      balance: 0
     }));
   }, [availableMonths]);
 
@@ -184,10 +184,10 @@ export default function DashboardPage() {
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
         ) : (
           <>
-            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Disponível após cofrinhos" color="bg-primary shadow-primary/20" />
+            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Projeção após despesas e cofrinhos" color="bg-primary shadow-primary/20" />
             <StatCard title="Receitas" value={formatCurrency(stats.totalRecebido)} icon={ArrowUpRight} description="Total recebido no mês" color="bg-emerald-500 shadow-emerald-200" />
-            <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total gasto no mês" color="bg-rose-500 shadow-rose-200" />
-            <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Diferença entre E/S" color="bg-blue-600 shadow-blue-200" />
+            <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total registrado no mês" color="bg-rose-500 shadow-rose-200" />
+            <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Diferença E/S do mês" color="bg-blue-600 shadow-blue-200" />
             <StatCard title="Cofrinhos" value={formatCurrency(stats.totalCofrinhos)} icon={PiggyIcon} description="Total reservado" color="bg-violet-600 shadow-violet-200" />
           </>
         )}
@@ -200,7 +200,7 @@ export default function DashboardPage() {
           <Card className="border-slate-200 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
-              <CardDescription>Gastos consolidados por dia do mês.</CardDescription>
+              <CardDescription>Gastos consolidados por dia (pagos e pendentes).</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               {isLoading ? (
@@ -212,7 +212,7 @@ export default function DashboardPage() {
                       <XAxis dataKey="day" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                       <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
                       <RechartsTooltip 
-                        formatter={(value: number) => [formatCurrency(value), 'Gasto']}
+                        formatter={(value: number) => [formatCurrency(value), 'Valor']}
                         labelFormatter={(label) => `Dia ${label}`}
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                       />
@@ -227,7 +227,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground">
                   <BarChart3 className="h-8 w-8 mb-2 opacity-20" />
-                  <p className="text-sm">Nenhum gasto registrado para gerar o resumo diário.</p>
+                  <p className="text-sm">Nenhuma despesa para este mês.</p>
                 </div>
               )}
             </CardContent>

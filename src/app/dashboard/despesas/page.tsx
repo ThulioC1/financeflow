@@ -58,6 +58,20 @@ const formatDate = (date: Timestamp | undefined) => {
     return d.toLocaleDateString('pt-BR');
 }
 
+// Mapeamento de cores por categoria (consistente com o Dashboard)
+const CATEGORY_COLORS: Record<string, string> = {
+  'Moradia': '#3b82f6',
+  'Alimentação': '#10b981',
+  'Transporte': '#6366f1',
+  'Contas': '#8b5cf6',
+  'Lazer': '#06b6d4',
+  'Saúde': '#f59e0b',
+  'Compras': '#ec4899',
+  'Pet': '#2dd4bf',
+  'Cartão': '#f43f5e',
+  'Outros': '#71717a',
+};
+
 export default function DespesasPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
   const [sortBy, setSortBy] = useState<'status' | 'dataPagamento' | 'createdAt'>('status');
@@ -318,8 +332,13 @@ export default function DespesasPage() {
            ))
          ) : filteredAndRecurringExpenses.length > 0 ? (
            filteredAndRecurringExpenses.map((expense) => (
-            <Card key={expense.id} className={cn("w-full transition-all hover:shadow-md", expense.isProjected ? "opacity-60 border-dashed" : "")}>
-              <CardContent className="p-4 space-y-2">
+            <Card key={expense.id} className={cn("w-full transition-all hover:shadow-md relative overflow-hidden", expense.isProjected ? "opacity-60 border-dashed" : "")}>
+              {/* "Bandeirinha" colorida com a cor da categoria */}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-1.5" 
+                style={{ backgroundColor: CATEGORY_COLORS[expense.categoria] || '#71717a' }}
+              />
+              <CardContent className="p-4 pl-6 space-y-2">
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold pr-2">{expense.descricao}</h3>
@@ -352,7 +371,9 @@ export default function DespesasPage() {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Categoria:</span>
-                    <Badge variant="outline">{expense.categoria}</Badge>
+                    <Badge variant="outline" style={{ borderColor: CATEGORY_COLORS[expense.categoria], color: CATEGORY_COLORS[expense.categoria] }}>
+                      {expense.categoria}
+                    </Badge>
                 </div>
                  <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Valor:</span>

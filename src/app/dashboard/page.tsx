@@ -11,7 +11,8 @@ import {
   ArrowDownRight,
   BarChart3,
   Calendar,
-  PiggyBank as PiggyIcon
+  PiggyBank as PiggyIcon,
+  Clock
 } from 'lucide-react';
 import {
     Select,
@@ -93,6 +94,7 @@ export default function DashboardPage() {
       saldoInicial: 0,
       totalRecebido: 0,
       totalGasto: 0,
+      totalPendente: 0,
       saldoAtual: 0,
       totalCofrinhos: 0,
       currentMonthExpenses: [] as Expense[],
@@ -117,15 +119,23 @@ export default function DashboardPage() {
     const selectedMonthExpenses = expenses.filter(e => e.mesReferencia === selectedMonth);
 
     result.totalRecebido = selectedMonthIncomes.reduce((acc, i) => acc + i.valor, 0);
-    // Mudança: Consideramos todas as despesas do mês no total de "Gasto planejado/atual" para visão geral
-    result.totalGasto = selectedMonthExpenses.reduce((acc, e) => acc + e.valor, 0);
-    result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
+    
+    // Totais separados por status
+    result.totalGasto = selectedMonthExpenses
+      .filter(e => e.status === 'pago')
+      .reduce((acc, e) => acc + e.valor, 0);
+      
+    result.totalPendente = selectedMonthExpenses
+      .filter(e => e.status === 'pendente')
+      .reduce((acc, e) => acc + e.valor, 0);
+
+    // Saldo Livre = Dinheiro que sobrou após TUDO (Pagos e Pendentes) e Cofrinhos
+    result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto - result.totalPendente) - result.totalCofrinhos;
     result.currentMonthExpenses = selectedMonthExpenses;
 
-    // Cálculo diário (Usando todas as despesas do mês para o gráfico não ficar vazio)
+    // Cálculo diário (Gráfico mostra tudo do mês para planejamento)
     const dailyMap: Record<number, number> = {};
     selectedMonthExpenses.forEach(exp => {
-      // Prioridade de data: Pagamento > Vencimento > Criação
       const date = exp.dataPagamento?.toDate() || exp.dataVencimento?.toDate() || exp.createdAt?.toDate();
       if (date) {
         const day = date.getDate();
@@ -136,7 +146,7 @@ export default function DashboardPage() {
       .map(([day, valor]) => ({ day: parseInt(day), valor }))
       .sort((a, b) => a.day - b.day);
 
-    // Categorias para o Advisor (sempre todas do mês)
+    // Categorias para o Advisor
     const categoryMap: Record<string, number> = {};
     selectedMonthExpenses.forEach(exp => {
       categoryMap[exp.categoria] = (categoryMap[exp.categoria] || 0) + exp.valor;
@@ -184,11 +194,11 @@ export default function DashboardPage() {
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
         ) : (
           <>
-            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Projeção após despesas e cofrinhos" color="bg-primary shadow-primary/20" />
-            <StatCard title="Receitas" value={formatCurrency(stats.totalRecebido)} icon={ArrowUpRight} description="Total recebido no mês" color="bg-emerald-500 shadow-emerald-200" />
-            <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total registrado no mês" color="bg-rose-500 shadow-rose-200" />
-            <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Diferença E/S do mês" color="bg-blue-600 shadow-blue-200" />
-            <StatCard title="Cofrinhos" value={formatCurrency(stats.totalCofrinhos)} icon={PiggyIcon} description="Total reservado" color="bg-violet-600 shadow-violet-200" />
+            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Após despesas e cofrinhos" color="bg-primary shadow-primary/20" />
+            <StatCard title="Receitas" value={formatCurrency(stats.totalRecebido)} icon={ArrowUpRight} description="Total recebido (pago)" color="bg-emerald-500 shadow-emerald-200" />
+            <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total efetivado (pago)" color="bg-rose-500 shadow-rose-200" />
+            <StatCard title="A Pagar" value={formatCurrency(stats.totalPendente)} icon={Clock} description="Aguardando pagamento" color="bg-amber-500 shadow-amber-200" />
+            <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Receitas - Despesas Pagas" color="bg-blue-600 shadow-blue-200" />
           </>
         )}
       </div>
@@ -200,7 +210,7 @@ export default function DashboardPage() {
           <Card className="border-slate-200 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
-              <CardDescription>Gastos consolidados por dia (pagos e pendentes).</CardDescription>
+              <CardDescription>Consolidado de gastos (Pagos e Pendentes) por dia.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               {isLoading ? (
@@ -239,7 +249,7 @@ export default function DashboardPage() {
             data={{
               month: selectedMonth,
               totalIncome: stats.totalRecebido,
-              totalExpenses: stats.totalGasto,
+              totalExpenses: stats.totalGasto + stats.totalPendente,
               expensesByCategory: stats.expensesByCategory
             }}
             history={history}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { MainNav } from '@/components/layout/main-nav';
@@ -11,6 +12,7 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 import { NotificationChecker } from '@/components/dashboard/notification-checker';
 import { Code2, Heart } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
+import { APP_VERSION } from '@/lib/version';
 
 export default function DashboardLayout({
   children,
@@ -53,10 +55,13 @@ export default function DashboardLayout({
             <p className="leading-tight">
               Desenvolvido por <span className="text-sidebar-foreground font-medium">Thulio Costa</span> & <span className="text-primary font-medium italic">AI Partner</span>
             </p>
-            <div className="mt-2 flex items-center gap-1 opacity-40">
-              <span>Made with</span>
-              <Heart className="h-2 w-2 fill-current text-destructive" />
-              <span>in Studio</span>
+            <div className="mt-2 flex items-center justify-between opacity-40">
+              <div className="flex items-center gap-1">
+                <span>Made with</span>
+                <Heart className="h-2 w-2 fill-current text-destructive" />
+                <span>in Studio</span>
+              </div>
+              <span className="font-mono text-[8px]">{APP_VERSION}</span>
             </div>
           </div>
         </SidebarFooter>

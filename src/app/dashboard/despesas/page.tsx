@@ -40,6 +40,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
+import { addMonths } from 'date-fns';
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -87,13 +88,11 @@ export default function DespesasPage() {
     if (!allExpenses) return [selectedMonth];
     const months = new Set(allExpenses.map(e => e.mesReferencia.slice(0, 7)));
 
-    // Add current month if not present
     const currentMonth = new Date().toISOString().slice(0, 7);
     if (!months.has(currentMonth)) {
       months.add(currentMonth);
     }
 
-    // add next 12 months for future planning
     let [year, month] = currentMonth.split('-').map(Number);
     for (let i = 0; i < 12; i++) {
         month++;
@@ -112,11 +111,9 @@ export default function DespesasPage() {
 
     const expensesForSelectedMonth = allExpenses.filter(e => e.mesReferencia === selectedMonth);
 
-    // Group all expenses by description to find recurring ones
     const recurringTemplates = new Map<string, Expense>();
     allExpenses.forEach(expense => {
         if (expense.recorrente) {
-            // Keep the earliest occurrence as the template
             const existing = recurringTemplates.get(expense.descricao);
             if (!existing || new Date(expense.mesReferencia) < new Date(existing.mesReferencia)) {
                 recurringTemplates.set(expense.descricao, expense);
@@ -133,15 +130,24 @@ export default function DespesasPage() {
             e => e.descricao === template.descricao
         );
 
-        if (templateDate <= selectedDate && !expenseExistsForMonth) {
+        if (templateDate < selectedDate && !expenseExistsForMonth) {
+            let projectedDueDate = template.dataVencimento;
+            
+            if (template.dataVencimento) {
+              const originalDue = template.dataVencimento.toDate();
+              const monthsDiff = (selectedDate.getFullYear() - templateDate.getFullYear()) * 12 + (selectedDate.getMonth() - templateDate.getMonth());
+              const newDueDate = addMonths(originalDue, monthsDiff);
+              projectedDueDate = Timestamp.fromDate(newDueDate);
+            }
+
             projectedExpenses.push({
                 ...template,
-                id: `${template.id}-${selectedMonth}`, // synthetic ID for react key
+                id: `${template.id}-${selectedMonth}`,
                 mesReferencia: selectedMonth,
                 status: 'pendente',
                 dataPagamento: undefined,
-                dataVencimento: template.dataVencimento,
-                isProjected: true, // Flag to identify projected expenses
+                dataVencimento: projectedDueDate,
+                isProjected: true,
             });
         }
     });
@@ -156,12 +162,12 @@ export default function DespesasPage() {
               if (timeA === 0 && timeB === 0) return a.descricao.localeCompare(b.descricao);
               if (timeA === 0) return 1;
               if (timeB === 0) return -1;
-              return timeB - timeA; // most recent first
+              return timeB - timeA;
           }
           case 'createdAt': {
               const timeA = a.createdAt?.toMillis() || 0;
               const timeB = b.createdAt?.toMillis() || 0;
-              return timeB - timeA; // newest first
+              return timeB - timeA;
           }
           case 'status':
           default: {
@@ -312,10 +318,13 @@ export default function DespesasPage() {
            ))
          ) : filteredAndRecurringExpenses.length > 0 ? (
            filteredAndRecurringExpenses.map((expense) => (
-            <Card key={expense.id} className={cn("w-full", expense.isProjected ? "opacity-50" : "")}>
+            <Card key={expense.id} className={cn("w-full transition-all hover:shadow-md", expense.isProjected ? "opacity-60 border-dashed" : "")}>
               <CardContent className="p-4 space-y-2">
                 <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-bold pr-2">{expense.descricao}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold pr-2">{expense.descricao}</h3>
+                      {expense.isProjected && <Badge variant="secondary" className="text-[10px]">Projetada</Badge>}
+                    </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
@@ -357,17 +366,19 @@ export default function DespesasPage() {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Vencimento:</span>
-                    <span>{formatDate(expense.dataVencimento)}</span>
+                    <span className={cn(expense.isProjected && "text-primary font-medium")}>{formatDate(expense.dataVencimento)}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Data de Pagamento:</span>
-                    <span>{formatDate(expense.dataPagamento)}</span>
-                </div>
+                {expense.status === 'pago' && (
+                  <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Pago em:</span>
+                      <span>{formatDate(expense.dataPagamento)}</span>
+                  </div>
+                )}
                 {expense.status === 'pendente' && (
                     <div className="pt-2">
                         <Button variant="outline" size="sm" className="w-full" onClick={() => handleMarkAsPaid(expense)}>
                             <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Marcar como Pago
+                            {expense.isProjected ? 'Efetivar e Pagar' : 'Marcar como Pago'}
                         </Button>
                     </div>
                 )}

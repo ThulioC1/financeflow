@@ -4,7 +4,6 @@
 import { useState, useMemo } from 'react';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { OverviewChart } from '@/components/dashboard/overview-chart';
-import { AdvisorCard } from '@/components/dashboard/advisor-card';
 import {
   Wallet,
   ArrowUpRight,
@@ -48,7 +47,6 @@ const formatMonth = (month: string) => {
 };
 
 // Mapeamento global de cores por categoria para consistência entre gráficos
-const CATEGORIES = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Cartão', 'Outros'];
 const CATEGORY_COLORS: Record<string, string> = {
   'Moradia': '#3b82f6',
   'Alimentação': '#10b981',
@@ -172,13 +170,6 @@ export default function DashboardPage() {
     return result;
   }, [incomes, expenses, banks, selectedMonth]);
 
-  const history = useMemo(() => {
-    return availableMonths.slice(1, 4).map(m => ({
-      month: m,
-      balance: 0
-    }));
-  }, [availableMonths]);
-
   return (
     <div className="space-y-8 pb-12">
        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -219,11 +210,13 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
           <OverviewChart expenses={stats.currentMonthExpenses} isLoading={isLoading} />
-          
-          <Card className="border-slate-200 shadow-sm overflow-hidden">
+        </div>
+
+        <div className="space-y-6">
+          <Card className="border-slate-200 shadow-sm overflow-hidden h-full">
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
               <CardDescription>Consolidado de gastos por categoria e dia.</CardDescription>
@@ -232,7 +225,7 @@ export default function DashboardPage() {
               {isLoading ? (
                 <Skeleton className="h-[250px] w-full" />
               ) : stats.dailyExpenses.length > 0 ? (
-                <div className="h-[250px] w-full">
+                <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stats.dailyExpenses}>
                       <XAxis dataKey="day" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
@@ -262,18 +255,6 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
-        </div>
-
-        <div className="space-y-6">
-          <AdvisorCard 
-            data={{
-              month: selectedMonth,
-              totalIncome: stats.totalRecebido,
-              totalExpenses: stats.totalGasto + stats.totalPendente,
-              expensesByCategory: stats.expensesByCategory
-            }}
-            history={history}
-          />
         </div>
       </div>
     </div>

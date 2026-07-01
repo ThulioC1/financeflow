@@ -129,8 +129,10 @@ export default function DashboardPage() {
       .filter(e => e.status === 'pendente')
       .reduce((acc, e) => acc + e.valor, 0);
 
-    // Saldo Livre = Dinheiro que sobrou após TUDO (Pagos e Pendentes) e Cofrinhos
-    result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto - result.totalPendente) - result.totalCofrinhos;
+    // Saldo Livre = Dinheiro real que sobrou (Saldo Inicial + Recebido - Gasto Efetivado) - Cofrinhos
+    // As despesas pendentes NÃO são subtraídas aqui, pois o dinheiro ainda está na conta.
+    result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
+    
     result.currentMonthExpenses = selectedMonthExpenses;
 
     // Cálculo diário (Gráfico mostra tudo do mês para planejamento)
@@ -194,11 +196,11 @@ export default function DashboardPage() {
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
         ) : (
           <>
-            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Após despesas e cofrinhos" color="bg-primary shadow-primary/20" />
-            <StatCard title="Receitas" value={formatCurrency(stats.totalRecebido)} icon={ArrowUpRight} description="Total recebido (pago)" color="bg-emerald-500 shadow-emerald-200" />
-            <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total efetivado (pago)" color="bg-rose-500 shadow-rose-200" />
+            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Dinheiro em conta menos cofrinhos" color="bg-primary shadow-primary/20" />
+            <StatCard title="Receitas" value={formatCurrency(stats.totalRecebido)} icon={ArrowUpRight} description="Total recebido" color="bg-emerald-500 shadow-emerald-200" />
+            <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total pago" color="bg-rose-500 shadow-rose-200" />
             <StatCard title="A Pagar" value={formatCurrency(stats.totalPendente)} icon={Clock} description="Aguardando pagamento" color="bg-amber-500 shadow-amber-200" />
-            <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Receitas - Despesas Pagas" color="bg-blue-600 shadow-blue-200" />
+            <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Entradas - Saídas Pagas" color="bg-blue-600 shadow-blue-200" />
           </>
         )}
       </div>

@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -36,6 +35,9 @@ const FinancialAdvisorOutputSchema = z.object({
 
 export type FinancialAdvisorOutput = z.infer<typeof FinancialAdvisorOutputSchema>;
 
+/**
+ * Fornece aconselhamento financeiro estratégico usando IA.
+ */
 export async function analyzeFinances(input: FinancialAdvisorInput): Promise<FinancialAdvisorOutput> {
   return financialAdvisorFlow(input);
 }

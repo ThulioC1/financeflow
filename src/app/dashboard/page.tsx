@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -10,7 +9,8 @@ import {
   ArrowDownRight,
   BarChart3,
   Calendar,
-  Clock
+  Clock,
+  Info
 } from 'lucide-react';
 import {
     Select,
@@ -32,6 +32,12 @@ import { collection } from 'firebase/firestore';
 import type { Income, Expense, PiggyBank } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', {
@@ -140,11 +146,11 @@ export default function DashboardPage() {
       .filter(e => e.status === 'pendente')
       .reduce((acc, e) => acc + e.valor, 0);
 
+    // O Saldo Livre reflete o dinheiro em mãos: (Histórico + Entradas atuais) - (Saídas atuais efetivadas) - Reservas
     result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
     
     result.currentMonthExpenses = selectedMonthExpenses;
 
-    // Cálculo diário com suporte a pilhas por categoria
     const dailyMap: Record<number, any> = {};
     const categoriesSet = new Set<string>();
     
@@ -201,11 +207,46 @@ export default function DashboardPage() {
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
         ) : (
           <>
-            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Dinheiro disponível hoje" color="bg-primary shadow-primary/20" />
-            <StatCard title="Receitas" value={formatCurrency(stats.totalRecebido)} icon={ArrowUpRight} description="Total recebido" color="bg-emerald-500 shadow-emerald-200" />
-            <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total pago" color="bg-rose-500 shadow-rose-200" />
-            <StatCard title="A Pagar" value={formatCurrency(stats.totalPendente)} icon={Clock} description="Aguardando pagamento" color="bg-amber-500 shadow-amber-200" />
-            <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Entradas - Pagos" color="bg-blue-600 shadow-blue-200" />
+            <StatCard 
+              title="Saldo Livre" 
+              value={formatCurrency(stats.saldoAtual)} 
+              icon={Wallet} 
+              description="Dinheiro disponível hoje" 
+              color="bg-primary shadow-primary/20"
+              info="Dinheiro efetivamente disponível na sua conta hoje, descontando o que você já pagou e o que está reservado nos seus cofrinhos. Contas pendentes não são subtraídas deste saldo."
+            />
+            <StatCard 
+              title="Receitas" 
+              value={formatCurrency(stats.totalRecebido)} 
+              icon={ArrowUpRight} 
+              description="Total recebido" 
+              color="bg-emerald-500 shadow-emerald-200"
+              info="Soma de todas as rendas marcadas como pagas (recebidas) no mês de referência selecionado."
+            />
+            <StatCard 
+              title="Despesas" 
+              value={formatCurrency(stats.totalGasto)} 
+              icon={ArrowDownRight} 
+              description="Total pago" 
+              color="bg-rose-500 shadow-rose-200"
+              info="Total de todos os seus gastos que já foram marcados como pagos no mês selecionado."
+            />
+            <StatCard 
+              title="A Pagar" 
+              value={formatCurrency(stats.totalPendente)} 
+              icon={Clock} 
+              description="Aguardando pagamento" 
+              color="bg-amber-500 shadow-amber-200"
+              info="Soma das despesas que possuem status 'pendente'. Representa seus compromissos financeiros futuros para este mês."
+            />
+            <StatCard 
+              title="Balanço" 
+              value={formatCurrency(stats.totalRecebido - stats.totalGasto)} 
+              icon={BarChart3} 
+              description="Entradas - Pagos" 
+              color="bg-blue-600 shadow-blue-200"
+              info="A diferença entre tudo o que você recebeu e tudo o que você efetivamente pagou no mês. Reflete sua economia real no período."
+            />
           </>
         )}
       </div>
@@ -217,9 +258,21 @@ export default function DashboardPage() {
 
         <div className="space-y-6">
           <Card className="border-slate-200 shadow-sm overflow-hidden h-full">
-            <CardHeader className="bg-muted/30 border-b">
-              <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
-              <CardDescription>Consolidado de gastos por categoria e dia.</CardDescription>
+            <CardHeader className="bg-muted/30 border-b flex flex-row items-center justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
+                <CardDescription>Consolidado de gastos por categoria e dia.</CardDescription>
+              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground/50 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[200px] text-xs">
+                    <p>Este gráfico mostra a soma dos seus gastos em cada dia do mês, divididos por categoria para facilitar a visualização de picos de consumo.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardHeader>
             <CardContent className="pt-6">
               {isLoading ? (

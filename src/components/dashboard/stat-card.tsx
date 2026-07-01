@@ -1,6 +1,13 @@
 import type { LucideIcon } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface StatCardProps {
   title: string;
@@ -8,17 +15,32 @@ interface StatCardProps {
   icon: LucideIcon;
   description: string;
   color: string;
+  info?: string;
 }
 
-export function StatCard({ title, value, icon: Icon, description, color }: StatCardProps) {
+export function StatCard({ title, value, icon: Icon, description, color, info }: StatCardProps) {
   return (
-    <Card className="overflow-hidden border-none shadow-md ring-1 ring-border transition-all hover:shadow-lg">
+    <Card className="overflow-hidden border-none shadow-md ring-1 ring-border transition-all hover:shadow-lg relative group">
       <CardContent className="p-6">
         <div className="flex items-center justify-between space-y-0 pb-4">
           <div className="space-y-1">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {title}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {title}
+              </p>
+              {info && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground/50 cursor-help hover:text-primary transition-colors" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[250px] text-xs leading-relaxed">
+                      <p>{info}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             <div className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
               {value}
             </div>

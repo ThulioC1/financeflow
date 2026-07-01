@@ -38,6 +38,7 @@ import { doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const incomeSchema = z.object({
   descricao: z.string().optional(),
@@ -45,7 +46,7 @@ const incomeSchema = z.object({
   valor: z.coerce.number().positive({ message: 'Valor deve ser positivo.' }),
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
   status: z.enum(['pago', 'pendente']).default('pendente'),
-  dataRecebimento: z.coerce.date().optional().nullable(),
+  dataRecebimento: z.date().optional().nullable(),
 });
 
 export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
@@ -109,6 +110,15 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDateChange = (onChange: (...event: any[]) => void, value: string) => {
+    if (!value) {
+      onChange(null);
+      return;
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    onChange(new Date(year, month - 1, day, 12, 0, 0));
   };
 
   return (
@@ -226,9 +236,8 @@ export function AddIncomeDialog({ children }: { children: React.ReactNode }) {
                         <FormControl>
                             <Input 
                                 type="date" 
-                                {...field}
-                                value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                                onChange={(e) => field.onChange(e.target.valueAsDate)}
+                                value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                                onChange={(e) => handleDateChange(field.onChange, e.target.value)}
                             />
                         </FormControl>
                         <FormMessage />

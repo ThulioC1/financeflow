@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -39,6 +40,7 @@ import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 
 const expenseSchema = z.object({
   descricao: z.string().min(2, { message: 'Descrição deve ter pelo menos 2 caracteres.' }),
@@ -47,8 +49,8 @@ const expenseSchema = z.object({
   recorrente: z.boolean().default(false),
   mesReferencia: z.string().regex(/^\d{4}-\d{2}$/, { message: 'Mês deve estar no formato AAAA-MM.' }),
   status: z.enum(['pago', 'pendente']).default('pendente'),
-  dataPagamento: z.coerce.date().optional().nullable(),
-  dataVencimento: z.coerce.date().optional().nullable(),
+  dataPagamento: z.date().optional().nullable(),
+  dataVencimento: z.date().optional().nullable(),
 });
 
 const categories = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Cartão', 'Outros'];
@@ -130,7 +132,6 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
               description: `Despesa ${expense.isProjected ? 'criada' : 'atualizada'}.`,
             });
             onOpenChange(false);
-            // Refresh imediato e limpeza manual de scroll caso o Radix trave
             setTimeout(() => {
               document.body.style.pointerEvents = 'auto';
               document.body.style.overflow = 'auto';
@@ -154,6 +155,15 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
         .finally(() => {
             setLoading(false);
         });
+  };
+
+  const handleDateChange = (onChange: (...event: any[]) => void, value: string) => {
+    if (!value) {
+      onChange(null);
+      return;
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    onChange(new Date(year, month - 1, day, 12, 0, 0));
   };
 
   return (
@@ -238,9 +248,8 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
                       <FormControl>
                           <Input 
                               type="date" 
-                              {...field}
-                              value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
-                              onChange={(e) => field.onChange(e.target.valueAsDate)}
+                              value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                              onChange={(e) => handleDateChange(field.onChange, e.target.value)}
                           />
                       </FormControl>
                       <FormMessage />
@@ -273,9 +282,10 @@ export function EditExpenseDialog({ expense, open, onOpenChange }: EditExpenseDi
                       <FormItem className={cn('flex flex-col', status !== 'pago' && 'hidden')}>
                           <FormLabel>Data de Pagamento</FormLabel>
                           <FormControl>
-                          <Input type="date" 
-                              onChange={(e) => field.onChange(e.target.valueAsDate)}
-                              value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : ''}
+                          <Input 
+                              type="date" 
+                              value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                              onChange={(e) => handleDateChange(field.onChange, e.target.value)}
                           />
                           </FormControl>
                           <FormMessage />

@@ -2,13 +2,13 @@
 'use server';
 
 /**
- * @fileOverview IA Financial Advisor flow.
+ * @fileOverview IA Financial Advisor flow for Ca$hOrd.
  *
  * - analyzeFinances - A function that provides strategic financial advice.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'zod';
+import { ai } from '@/ai/genkit-config';
+import { z } from 'genkit';
 
 const FinancialAdvisorInputSchema = z.object({
   currentMonth: z.object({
@@ -44,8 +44,9 @@ const prompt = ai.definePrompt({
   name: 'financialAdvisorPrompt',
   input: { schema: FinancialAdvisorInputSchema },
   output: { schema: FinancialAdvisorOutputSchema },
-  prompt: `Você é um consultor financeiro pessoal experiente e amigável.
-  Analise os seguintes dados financeiros do usuário e forneça um resumo estratégico, recomendações práticas e determine o nível de risco.
+  prompt: `Você é o consultor financeiro IA do Ca$hOrd.
+  Sua missão é ajudar o usuário a manter o "dinheiro em ordem".
+  Analise os seguintes dados financeiros e forneça um resumo estratégico, recomendações práticas e determine o nível de risco.
   
   Mês Atual: {{currentMonth.month}}
   Renda Total: R$ {{currentMonth.totalIncome}}

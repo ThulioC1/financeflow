@@ -1,7 +1,8 @@
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/google-genai';
 
-export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.5-flash',
-});
+'use client';
+/**
+ * Arquivo stub para evitar conflitos de resolução de nomes com a biblioteca 'genkit'.
+ * O Next.js/Webpack pode tentar resolver 'import from genkit' para este arquivo local
+ * se ele estiver presente no mesmo diretório.
+ */
+export const _GENKIT_STUB = true;

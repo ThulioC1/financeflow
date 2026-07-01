@@ -2,15 +2,11 @@
 'use server';
 
 /**
- * @fileOverview AI-powered income forecasting flow.
- *
- * - forecastIncome - A function that forecasts future income based on past data.
- * - ForecastIncomeInput - The input type for the forecastIncome function.
- * - ForecastIncomeOutput - The return type for the forecastIncome function.
+ * @fileOverview AI-powered income forecasting flow for Ca$hOrd.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'zod';
+import { ai } from '@/ai/genkit-config';
+import { z } from 'genkit';
 
 const ForecastIncomeInputSchema = z.object({
   pastIncomeData: z
@@ -41,7 +37,7 @@ const prompt = ai.definePrompt({
   name: 'forecastIncomePrompt',
   input: {schema: ForecastIncomeInputSchema},
   output: {schema: ForecastIncomeOutputSchema},
-  prompt: `You are a personal finance advisor. You will analyze past income data to forecast income for the current month.
+  prompt: `You are the Ca$hOrd finance advisor. You will analyze past income data to forecast income for the current month.
 
 Past Income Data:
 {{#each pastIncomeData}}

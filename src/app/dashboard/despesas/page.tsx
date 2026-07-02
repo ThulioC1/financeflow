@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, CheckCircle2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, CheckCircle2, AlertTriangle } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -76,7 +76,7 @@ export default function DespesasPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
   const [sortBy, setSortBy] = useState<'status' | 'dataPagamento' | 'createdAt'>('status');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   const db = useFirestore();
   const { user } = useUser();
@@ -197,14 +197,33 @@ export default function DespesasPage() {
   }, [allExpenses, selectedMonth, sortBy]);
 
   const handleDeleteConfirm = () => {
-    if (!user || !deletingExpenseId) return;
-    const expenseRef = doc(db, 'users', user.uid, 'expenses', deletingExpenseId);
-    deleteDocumentNonBlocking(expenseRef);
-    toast({
-        title: 'Despesa excluída!',
-        description: 'Sua despesa foi removida com sucesso.'
-    });
-    setDeletingExpenseId(null);
+    if (!user || !expenseToDelete || !allExpenses) return;
+
+    if (expenseToDelete.recorrente) {
+      // Deleta todas as instâncias reais com a mesma descrição para parar a recorrência
+      const instancesToDelete = allExpenses.filter(e => e.descricao === expenseToDelete.descricao);
+      instancesToDelete.forEach(exp => {
+        const ref = doc(db, 'users', user.uid, 'expenses', exp.id);
+        deleteDocumentNonBlocking(ref);
+      });
+      toast({
+          title: 'Recorrência excluída!',
+          description: `Todas as instâncias de "${expenseToDelete.descricao}" foram removidas.`
+      });
+    } else {
+      // Exclusão simples (não é recorrente ou é uma projeção de algo que já foi tratado)
+      // Nota: Se for isProjected, o ID não existe no Firestore, então não faz nada ou já foi tratado pela lógica recorrente acima.
+      if (!expenseToDelete.isProjected) {
+        const expenseRef = doc(db, 'users', user.uid, 'expenses', expenseToDelete.id);
+        deleteDocumentNonBlocking(expenseRef);
+        toast({
+            title: 'Despesa excluída!',
+            description: 'Sua despesa foi removida com sucesso.'
+        });
+      }
+    }
+
+    setExpenseToDelete(null);
     handleRefresh();
   };
 
@@ -263,19 +282,29 @@ export default function DespesasPage() {
     )}
     
     <AlertDialog
-        open={!!deletingExpenseId}
-        onOpenChange={(open) => !open && setDeletingExpenseId(null)}
+        open={!!expenseToDelete}
+        onOpenChange={(open) => !open && setExpenseToDelete(null)}
     >
         <AlertDialogContent>
             <AlertDialogHeader>
-                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  {expenseToDelete?.recorrente && <AlertTriangle className="h-5 w-5 text-amber-500" />}
+                  {expenseToDelete?.recorrente ? 'Excluir Toda a Recorrência?' : 'Você tem certeza?'}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                    Essa ação não pode ser desfeita. Isso excluirá permanentemente a despesa.
+                    {expenseToDelete?.recorrente 
+                      ? `Esta é uma despesa recorrente. Excluir "${expenseToDelete.descricao}" removerá TODAS as instâncias (pagas e pendentes) de todos os meses.`
+                      : 'Essa ação não pode ser desfeita. Isso excluirá permanentemente a despesa selecionada.'}
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteConfirm}>Excluir</AlertDialogAction>
+                <AlertDialogAction 
+                  onClick={handleDeleteConfirm}
+                  className={expenseToDelete?.recorrente ? "bg-amber-600 hover:bg-amber-700" : ""}
+                >
+                  Confirmar Exclusão
+                </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
@@ -333,7 +362,6 @@ export default function DespesasPage() {
          ) : filteredAndRecurringExpenses.length > 0 ? (
            filteredAndRecurringExpenses.map((expense) => (
             <Card key={expense.id} className={cn("w-full transition-all hover:shadow-md relative overflow-hidden", expense.isProjected ? "opacity-60 border-dashed" : "")}>
-              {/* "Bandeirinha" colorida com a cor da categoria */}
               <div 
                 className="absolute left-0 top-0 bottom-0 w-1.5" 
                 style={{ backgroundColor: CATEGORY_COLORS[expense.categoria] || '#71717a' }}
@@ -360,11 +388,10 @@ export default function DespesasPage() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 className="text-red-600 focus:text-red-500 focus:bg-red-50"
-                                onClick={() => setDeletingExpenseId(expense.id)}
-                                disabled={expense.isProjected}
+                                onClick={() => setExpenseToDelete(expense)}
                             >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Excluir
+                                {expense.recorrente ? 'Excluir Recorrência' : 'Excluir'}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

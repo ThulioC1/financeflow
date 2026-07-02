@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
@@ -200,19 +201,34 @@ export default function DespesasPage() {
     if (!user || !expenseToDelete || !allExpenses) return;
 
     if (expenseToDelete.recorrente) {
-      // Deleta todas as instâncias reais com a mesma descrição para parar a recorrência
-      const instancesToDelete = allExpenses.filter(e => e.descricao === expenseToDelete.descricao);
-      instancesToDelete.forEach(exp => {
+      // 1. Deleta as instâncias REAIS do mês selecionado em diante
+      const futureInstances = allExpenses.filter(e => 
+        e.descricao === expenseToDelete.descricao && 
+        e.mesReferencia >= selectedMonth
+      );
+      
+      futureInstances.forEach(exp => {
         const ref = doc(db, 'users', user.uid, 'expenses', exp.id);
         deleteDocumentNonBlocking(ref);
       });
+
+      // 2. Para as instâncias passadas, remove o flag de recorrente para parar a projeção futura
+      const pastInstances = allExpenses.filter(e => 
+        e.descricao === expenseToDelete.descricao && 
+        e.mesReferencia < selectedMonth
+      );
+
+      pastInstances.forEach(exp => {
+        const ref = doc(db, 'users', user.uid, 'expenses', exp.id);
+        updateDocumentNonBlocking(ref, { recorrente: false });
+      });
+
       toast({
-          title: 'Recorrência excluída!',
-          description: `Todas as instâncias de "${expenseToDelete.descricao}" foram removidas.`
+          title: 'Recorrência encerrada!',
+          description: `As instâncias de "${expenseToDelete.descricao}" deste mês em diante foram removidas. O histórico foi preservado.`
       });
     } else {
-      // Exclusão simples (não é recorrente ou é uma projeção de algo que já foi tratado)
-      // Nota: Se for isProjected, o ID não existe no Firestore, então não faz nada ou já foi tratado pela lógica recorrente acima.
+      // Exclusão simples (não é recorrente ou é uma projeção)
       if (!expenseToDelete.isProjected) {
         const expenseRef = doc(db, 'users', user.uid, 'expenses', expenseToDelete.id);
         deleteDocumentNonBlocking(expenseRef);
@@ -289,11 +305,11 @@ export default function DespesasPage() {
             <AlertDialogHeader>
                 <AlertDialogTitle className="flex items-center gap-2">
                   {expenseToDelete?.recorrente && <AlertTriangle className="h-5 w-5 text-amber-500" />}
-                  {expenseToDelete?.recorrente ? 'Excluir Toda a Recorrência?' : 'Você tem certeza?'}
+                  {expenseToDelete?.recorrente ? 'Encerrar Recorrência?' : 'Você tem certeza?'}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                     {expenseToDelete?.recorrente 
-                      ? `Esta é uma despesa recorrente. Excluir "${expenseToDelete.descricao}" removerá TODAS as instâncias (pagas e pendentes) de todos os meses.`
+                      ? `Deseja encerrar a recorrência de "${expenseToDelete.descricao}" a partir deste mês? Esta ação removerá as instâncias futuras, mas manterá o histórico dos meses anteriores.`
                       : 'Essa ação não pode ser desfeita. Isso excluirá permanentemente a despesa selecionada.'}
                 </AlertDialogDescription>
             </AlertDialogHeader>
@@ -303,7 +319,7 @@ export default function DespesasPage() {
                   onClick={handleDeleteConfirm}
                   className={expenseToDelete?.recorrente ? "bg-amber-600 hover:bg-amber-700" : ""}
                 >
-                  Confirmar Exclusão
+                  Confirmar
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
@@ -391,7 +407,7 @@ export default function DespesasPage() {
                                 onClick={() => setExpenseToDelete(expense)}
                             >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                {expense.recorrente ? 'Excluir Recorrência' : 'Excluir'}
+                                {expense.recorrente ? 'Encerrar Recorrência' : 'Excluir'}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

@@ -42,6 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from '@/lib/utils';
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -130,6 +131,10 @@ export default function DashboardPage() {
     result.totalRecebido = selIncomes.reduce((acc, i) => acc + i.valor, 0);
     result.totalGasto = selExpenses.filter(e => e.status === 'pago').reduce((acc, e) => acc + e.valor, 0);
     result.totalPendente = selExpenses.filter(e => e.status === 'pendente').reduce((acc, e) => acc + e.valor, 0);
+    
+    // O Saldo Livre agora reflete o saldo real na conta (considerando histórico e recebidos) 
+    // menos o que já foi pago e o que está reservado nos cofrinhos.
+    // As despesas pendentes não saíram da conta ainda, por isso não são subtraídas do "hoje".
     result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
     result.currentMonthExpenses = selExpenses;
 
@@ -186,7 +191,7 @@ export default function DashboardPage() {
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
         ) : (
           <>
-            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Dinheiro disponível hoje" color="bg-primary shadow-primary/20" info="Reflete o dinheiro em conta hoje, descontando o que já foi pago e os cofrinhos." />
+            <StatCard title="Saldo Livre" value={formatCurrency(result.saldoAtual)} icon={Wallet} description="Dinheiro disponível hoje" color="bg-primary shadow-primary/20" info="Reflete o dinheiro em conta hoje, descontando o que já foi pago e os cofrinhos. Contas pendentes não são subtraídas pois o dinheiro ainda não saiu da sua conta." />
             <StatCard title="Receitas" value={formatCurrency(stats.totalRecebido)} icon={ArrowUpRight} description="Total recebido" color="bg-emerald-500 shadow-emerald-200" info="Soma das rendas marcadas como pagas no mês selecionado." />
             <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total pago" color="bg-rose-500 shadow-rose-200" info="Total de gastos já marcados como pagos." />
             <StatCard title="A Pagar" value={formatCurrency(stats.totalPendente)} icon={Clock} description="Aguardando pagamento" color="bg-amber-500 shadow-amber-200" info="Gastos pendentes para este mês." />
@@ -202,6 +207,16 @@ export default function DashboardPage() {
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
               Consumo da Renda
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[200px]">
+                    <p>Mede quanto da sua renda já foi consumida por despesas totais (pagas + pendentes).</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardTitle>
             <CardDescription>Quanto da sua renda já está comprometida.</CardDescription>
           </CardHeader>
@@ -228,6 +243,16 @@ export default function DashboardPage() {
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <CalendarCheck className="h-5 w-5 text-indigo-500" />
               Progresso do Mês
+               <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[200px]">
+                    <p>Compara quanto tempo do mês já passou com quanto você já gastou. Idealmente, o tempo deve passar mais rápido que os gastos.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardTitle>
             <CardDescription>Tempo decorrido vs Gastos realizados.</CardDescription>
           </CardHeader>
@@ -256,6 +281,16 @@ export default function DashboardPage() {
                 <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
                 <CardDescription>Gastos consolidados por categoria e dia.</CardDescription>
               </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[250px]">
+                    <p>Mostra como seus gastos estão distribuídos ao longo dos dias do mês, categorizados por cor.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardHeader>
             <CardContent className="pt-6">
               {isLoading ? (

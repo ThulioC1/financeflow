@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, CheckCircle2, AlertTriangle, Search, FilterX } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -39,6 +39,7 @@ import { AddExpenseDialog } from "@/components/dashboard/add-expense-dialog";
 import { EditExpenseDialog } from "@/components/dashboard/edit-expense-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
 import { addMonths } from 'date-fns';
@@ -59,7 +60,6 @@ const formatDate = (date: Timestamp | undefined) => {
     return d.toLocaleDateString('pt-BR');
 }
 
-// Mapeamento de cores por categoria (consistente com o Dashboard)
 const CATEGORY_COLORS: Record<string, string> = {
   'Moradia': '#3b82f6',
   'Alimentação': '#10b981',
@@ -73,9 +73,13 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Outros': '#71717a',
 };
 
+const CATEGORIES = ['Moradia', 'Alimentação', 'Transporte', 'Contas', 'Lazer', 'Saúde', 'Compras', 'Pet', 'Cartão', 'Outros'];
+
 export default function DespesasPage() {
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
   const [sortBy, setSortBy] = useState<'status' | 'dataPagamento' | 'createdAt'>('status');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
@@ -102,22 +106,8 @@ export default function DespesasPage() {
   const availableMonths = useMemo(() => {
     if (!allExpenses) return [selectedMonth];
     const months = new Set(allExpenses.map(e => e.mesReferencia.slice(0, 7)));
-
     const currentMonth = new Date().toISOString().slice(0, 7);
-    if (!months.has(currentMonth)) {
-      months.add(currentMonth);
-    }
-
-    let [year, month] = currentMonth.split('-').map(Number);
-    for (let i = 0; i < 12; i++) {
-        month++;
-        if (month > 12) {
-            month = 1;
-            year++;
-        }
-        months.add(`${year}-${String(month).padStart(2, '0')}`);
-    }
-
+    if (!months.has(currentMonth)) months.add(currentMonth);
     return Array.from(months).sort().reverse();
   }, [allExpenses, selectedMonth]);
 
@@ -147,7 +137,6 @@ export default function DespesasPage() {
 
         if (templateDate < selectedDate && !expenseExistsForMonth) {
             let projectedDueDate = template.dataVencimento;
-            
             if (template.dataVencimento) {
               const originalDue = template.dataVencimento.toDate();
               const monthsDiff = (selectedDate.getFullYear() - templateDate.getFullYear()) * 12 + (selectedDate.getMonth() - templateDate.getMonth());
@@ -167,8 +156,20 @@ export default function DespesasPage() {
         }
     });
 
-    const combinedExpenses = [...expensesForSelectedMonth, ...projectedExpenses]
+    let combinedExpenses = [...expensesForSelectedMonth, ...projectedExpenses];
     
+    // Filtro de Busca
+    if (searchTerm) {
+      combinedExpenses = combinedExpenses.filter(e => 
+        e.descricao.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filtro de Categoria
+    if (filterCategory !== 'all') {
+      combinedExpenses = combinedExpenses.filter(e => e.categoria === filterCategory);
+    }
+
     combinedExpenses.sort((a, b) => {
       switch(sortBy) {
           case 'dataPagamento': {
@@ -186,70 +187,50 @@ export default function DespesasPage() {
           }
           case 'status':
           default: {
-              if (a.status === b.status) {
-                  return a.descricao.localeCompare(b.descricao);
-              }
+              if (a.status === b.status) return a.descricao.localeCompare(b.descricao);
               return a.status === 'pendente' ? -1 : 1;
           }
       }
     });
 
     return combinedExpenses;
-  }, [allExpenses, selectedMonth, sortBy]);
+  }, [allExpenses, selectedMonth, sortBy, searchTerm, filterCategory]);
 
   const handleDeleteConfirm = () => {
     if (!user || !expenseToDelete || !allExpenses) return;
 
     if (expenseToDelete.recorrente) {
-      // 1. Deleta as instâncias REAIS do mês selecionado em diante
       const futureInstances = allExpenses.filter(e => 
-        e.descricao === expenseToDelete.descricao && 
-        e.mesReferencia >= selectedMonth
+        e.descricao === expenseToDelete.descricao && e.mesReferencia >= selectedMonth
       );
-      
       futureInstances.forEach(exp => {
         const ref = doc(db, 'users', user.uid, 'expenses', exp.id);
         deleteDocumentNonBlocking(ref);
       });
-
-      // 2. Para as instâncias passadas, remove o flag de recorrente para parar a projeção futura
       const pastInstances = allExpenses.filter(e => 
-        e.descricao === expenseToDelete.descricao && 
-        e.mesReferencia < selectedMonth
+        e.descricao === expenseToDelete.descricao && e.mesReferencia < selectedMonth
       );
-
       pastInstances.forEach(exp => {
         const ref = doc(db, 'users', user.uid, 'expenses', exp.id);
         updateDocumentNonBlocking(ref, { recorrente: false });
       });
-
-      toast({
-          title: 'Recorrência encerrada!',
-          description: `As instâncias de "${expenseToDelete.descricao}" deste mês em diante foram removidas. O histórico foi preservado.`
-      });
+      toast({ title: 'Recorrência encerrada!' });
     } else {
-      // Exclusão simples (não é recorrente ou é uma projeção)
       if (!expenseToDelete.isProjected) {
         const expenseRef = doc(db, 'users', user.uid, 'expenses', expenseToDelete.id);
         deleteDocumentNonBlocking(expenseRef);
-        toast({
-            title: 'Despesa excluída!',
-            description: 'Sua despesa foi removida com sucesso.'
-        });
+        toast({ title: 'Despesa excluída!' });
       }
     }
-
     setExpenseToDelete(null);
     handleRefresh();
   };
 
   const handleMarkAsPaid = (expense: Expense) => {
     if (!user || !db) return;
-
     if (expense.isProjected) {
         const newId = crypto.randomUUID();
         const newExpenseRef = doc(db, 'users', user.uid, 'expenses', newId);
-        
         const dataToCreate = {
             descricao: expense.descricao,
             valor: expense.valor,
@@ -263,22 +244,12 @@ export default function DespesasPage() {
             createdAt: serverTimestamp(),
             dataVencimento: expense.dataVencimento || null,
         };
-
         setDocumentNonBlocking(newExpenseRef, dataToCreate, {});
-
     } else {
         const expenseRef = doc(db, 'users', user.uid, 'expenses', expense.id);
-        const dataToUpdate = {
-            status: 'pago',
-            dataPagamento: Timestamp.now(),
-        };
-        updateDocumentNonBlocking(expenseRef, dataToUpdate);
+        updateDocumentNonBlocking(expenseRef, { status: 'pago', dataPagamento: Timestamp.now() });
     }
-    
-    toast({
-        title: 'Sucesso!',
-        description: 'Despesa marcada como paga.',
-    });
+    toast({ title: 'Sucesso!', description: 'Despesa marcada como paga.' });
     handleRefresh();
   };
 
@@ -289,18 +260,12 @@ export default function DespesasPage() {
           expense={editingExpense}
           open={!!editingExpense}
           onOpenChange={(open) => {
-              if (!open) {
-                setEditingExpense(null);
-                handleRefresh();
-              }
+              if (!open) { setEditingExpense(null); handleRefresh(); }
           }}
       />
     )}
     
-    <AlertDialog
-        open={!!expenseToDelete}
-        onOpenChange={(open) => !open && setExpenseToDelete(null)}
-    >
+    <AlertDialog open={!!expenseToDelete} onOpenChange={(open) => !open && setExpenseToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle className="flex items-center gap-2">
@@ -309,18 +274,13 @@ export default function DespesasPage() {
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                     {expenseToDelete?.recorrente 
-                      ? `Deseja encerrar a recorrência de "${expenseToDelete.descricao}" a partir deste mês? Esta ação removerá as instâncias futuras, mas manterá o histórico dos meses anteriores.`
-                      : 'Essa ação não pode ser desfeita. Isso excluirá permanentemente a despesa selecionada.'}
+                      ? `Deseja encerrar a recorrência de "${expenseToDelete.descricao}" a partir deste mês?`
+                      : 'Essa ação não pode ser desfeita.'}
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={handleDeleteConfirm}
-                  className={expenseToDelete?.recorrente ? "bg-amber-600 hover:bg-amber-700" : ""}
-                >
-                  Confirmar
-                </AlertDialogAction>
+                <AlertDialogAction onClick={handleDeleteConfirm} className={expenseToDelete?.recorrente ? "bg-amber-600 hover:bg-amber-700" : ""}>Confirmar</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
@@ -333,55 +293,61 @@ export default function DespesasPage() {
         </div>
         <div className="grid w-full grid-cols-1 items-start gap-2 sm:w-auto sm:flex-row sm:items-center md:flex">
             <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={isLoading}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Selecione um mês" />
-                </SelectTrigger>
-                <SelectContent>
-                {availableMonths.map(month => (
-                    <SelectItem key={month} value={month}>
-                    {formatMonth(month)}
-                    </SelectItem>
-                ))}
-                </SelectContent>
+                <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+                <SelectContent>{availableMonths.map(month => <SelectItem key={month} value={month}>{formatMonth(month)}</SelectItem>)}</SelectContent>
             </Select>
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="Ordenar por" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="status">Status</SelectItem>
-                    <SelectItem value="dataPagamento">Data de Pagamento</SelectItem>
-                    <SelectItem value="createdAt">Data de Adição</SelectItem>
-                </SelectContent>
-            </Select>
-            <AddExpenseDialog>
-                <Button className="w-full sm:w-auto">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Adicionar Despesa
-                </Button>
-            </AddExpenseDialog>
+            <AddExpenseDialog><Button className="w-full sm:w-auto"><PlusCircle className="mr-2 h-4 w-4" />Adicionar</Button></AddExpenseDialog>
         </div>
       </header>
+
+      {/* Barra de Filtros e Busca */}
+      <Card className="bg-muted/30 border-dashed">
+        <CardContent className="p-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar por descrição..." 
+              className="pl-9" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Categorias</SelectItem>
+                {CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder="Ordenar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="status">Status</SelectItem>
+                <SelectItem value="dataPagamento">Pagamento</SelectItem>
+                <SelectItem value="createdAt">Recente</SelectItem>
+              </SelectContent>
+            </Select>
+            {(searchTerm || filterCategory !== 'all') && (
+              <Button variant="ghost" size="icon" onClick={() => { setSearchTerm(''); setFilterCategory('all'); }} title="Limpar Filtros">
+                <FilterX className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
       
       <div className="space-y-4">
          {isLoading ? (
-           Array.from({ length: 5 }).map((_, i) => (
-             <Card key={i}>
-               <CardContent className="p-4 space-y-3">
-                 <Skeleton className="h-6 w-3/4" />
-                 <Skeleton className="h-5 w-1/4 mt-1" />
-                 <Skeleton className="h-5 w-1/3" />
-                 <Skeleton className="h-5 w-1/4" />
-               </CardContent>
-             </Card>
-           ))
+           Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)
          ) : filteredAndRecurringExpenses.length > 0 ? (
            filteredAndRecurringExpenses.map((expense) => (
             <Card key={expense.id} className={cn("w-full transition-all hover:shadow-md relative overflow-hidden", expense.isProjected ? "opacity-60 border-dashed" : "")}>
-              <div 
-                className="absolute left-0 top-0 bottom-0 w-1.5" 
-                style={{ backgroundColor: CATEGORY_COLORS[expense.categoria] || '#71717a' }}
-              />
+              <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: CATEGORY_COLORS[expense.categoria] || '#71717a' }} />
               <CardContent className="p-4 pl-6 space-y-2">
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
@@ -389,34 +355,18 @@ export default function DespesasPage() {
                       {expense.isProjected && <Badge variant="secondary" className="text-[10px]">Projetada</Badge>}
                     </div>
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
-                                <span className="sr-only">Abrir menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => setEditingExpense(expense)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Editar
-                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setEditingExpense(expense)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                className="text-red-600 focus:text-red-500 focus:bg-red-50"
-                                onClick={() => setExpenseToDelete(expense)}
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {expense.recorrente ? 'Encerrar Recorrência' : 'Excluir'}
-                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600" onClick={() => setExpenseToDelete(expense)}><Trash2 className="mr-2 h-4 w-4" />{expense.recorrente ? 'Encerrar Recorrência' : 'Excluir'}</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Categoria:</span>
-                    <Badge variant="outline" style={{ borderColor: CATEGORY_COLORS[expense.categoria], color: CATEGORY_COLORS[expense.categoria] }}>
-                      {expense.categoria}
-                    </Badge>
+                    <Badge variant="outline" style={{ borderColor: CATEGORY_COLORS[expense.categoria], color: CATEGORY_COLORS[expense.categoria] }}>{expense.categoria}</Badge>
                 </div>
                  <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Valor:</span>
@@ -424,25 +374,16 @@ export default function DespesasPage() {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Status:</span>
-                    <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'}>
-                        {expense.status}
-                    </Badge>
+                    <Badge variant={expense.status === 'pago' ? 'success' : 'destructive'}>{expense.status}</Badge>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Vencimento:</span>
                     <span className={cn(expense.isProjected && "text-primary font-medium")}>{formatDate(expense.dataVencimento)}</span>
                 </div>
-                {expense.status === 'pago' && (
-                  <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Pago em:</span>
-                      <span>{formatDate(expense.dataPagamento)}</span>
-                  </div>
-                )}
                 {expense.status === 'pendente' && (
                     <div className="pt-2">
                         <Button variant="outline" size="sm" className="w-full" onClick={() => handleMarkAsPaid(expense)}>
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            {expense.isProjected ? 'Efetivar e Pagar' : 'Marcar como Pago'}
+                            <CheckCircle2 className="mr-2 h-4 w-4" />{expense.isProjected ? 'Efetivar e Pagar' : 'Marcar como Pago'}
                         </Button>
                     </div>
                 )}
@@ -450,11 +391,7 @@ export default function DespesasPage() {
             </Card>
            ))
          ) : (
-           <Card>
-             <CardContent className="flex h-24 items-center justify-center text-center text-muted-foreground">
-               <p>Nenhuma despesa encontrada para este mês.</p>
-             </CardContent>
-           </Card>
+           <Card><CardContent className="flex h-32 items-center justify-center text-muted-foreground"><p>Nenhuma despesa encontrada com estes filtros.</p></CardContent></Card>
          )}
        </div>
     </div>

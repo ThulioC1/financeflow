@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -11,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, Smartphone, Download } from 'lucide-react';
+import { Loader2, Upload } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
@@ -112,8 +113,8 @@ export default function PerfilPage() {
         <p className="text-muted-foreground">Gerencie suas informações pessoais e configurações da conta.</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="md:col-span-2 overflow-hidden border-none shadow-md ring-1 ring-border">
+      <div className="grid gap-6">
+        <Card className="overflow-hidden border-none shadow-md ring-1 ring-border">
           <CardHeader className="bg-muted/30 pb-4">
               <CardTitle className="text-xl">Informações da Conta</CardTitle>
               <CardDescription>Dados visíveis no seu perfil e notificações.</CardDescription>
@@ -187,49 +188,11 @@ export default function PerfilPage() {
           </CardContent>
         </Card>
 
-        {/* Card de Download do APK */}
-        <Card className="border-primary/20 bg-primary/5 shadow-sm overflow-hidden flex flex-col justify-between">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary text-primary-foreground">
-                <Smartphone className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-bold">App Android</CardTitle>
-                <CardDescription>Instale o APK no seu dispositivo.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Leve o <strong>Ca$hOrd</strong> sempre com você. Baixe nossa versão mobile para Android e tenha controle total das suas finanças na palma da mão.
-            </p>
-            <Button 
-              asChild 
-              className="w-full shadow-lg shadow-primary/20"
-              variant="default"
-            >
-              <a 
-                href="https://dub.sh/M0e5D3a" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Baixar Aplicativo (APK)
-              </a>
-            </Button>
-            <p className="text-[10px] text-center text-muted-foreground opacity-60">
-              O link abrirá no seu navegador externo para iniciar o download.
-            </p>
-          </CardContent>
-        </Card>
-
         {/* Card de Segurança/Informações */}
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">Informações</CardTitle>
-            <CardDescription>Detalhes do sistema.</CardDescription>
+            <CardTitle className="text-lg font-bold">Informações do Sistema</CardTitle>
+            <CardDescription>Detalhes técnicos da sua sessão.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center text-sm py-2 border-b border-dashed">
@@ -238,13 +201,13 @@ export default function PerfilPage() {
             </div>
             <div className="flex justify-between items-center text-sm py-2 border-b border-dashed">
               <span className="text-muted-foreground">Plataforma:</span>
-              <span className="font-medium">Web / PWA</span>
+              <span className="font-medium">Web / PWA / Android</span>
             </div>
             <div className="flex justify-between items-center text-sm py-2">
               <span className="text-muted-foreground">Estado do Sistema:</span>
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-medium text-emerald-600">Online</span>
+                <span className="font-medium text-emerald-600">Conectado</span>
               </div>
             </div>
           </CardContent>

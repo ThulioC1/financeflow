@@ -30,6 +30,9 @@ import {
   XAxis, 
   YAxis, 
   Tooltip as RechartsTooltip,
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis
 } from 'recharts';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -219,8 +222,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {/* Consumo da Renda */}
-        <Card className="border-slate-200 shadow-sm relative overflow-hidden">
+        {/* Consumo da Renda - Visual Radial */}
+        <Card className="border-slate-200 shadow-sm relative overflow-hidden flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
@@ -238,22 +241,36 @@ export default function DashboardPage() {
             </CardTitle>
             <CardDescription>Comprometimento do orçamento.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Gastos vs Renda</span>
-                <span className="font-bold">{stats.budgetHealth.toFixed(1)}%</span>
+          <CardContent className="flex-1 flex flex-col items-center justify-center space-y-2">
+            <div className="h-[180px] w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadialBarChart 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius="70%" 
+                  outerRadius="100%" 
+                  barSize={12} 
+                  data={[{ value: Math.min(stats.budgetHealth, 100), fill: stats.budgetHealth > 90 ? '#ef4444' : stats.budgetHealth > 70 ? '#f59e0b' : '#3b82f6' }]} 
+                  startAngle={90} 
+                  endAngle={-270}
+                >
+                  <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                  <RadialBar background dataKey="value" cornerRadius={6} />
+                </RadialBarChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black">{stats.budgetHealth.toFixed(1)}%</span>
+                <span className="text-[10px] uppercase text-muted-foreground font-bold">Gastos</span>
               </div>
-              <Progress value={stats.budgetHealth} className={cn("h-2", stats.budgetHealth > 90 ? "bg-red-100 [&>div]:bg-red-500" : stats.budgetHealth > 70 ? "bg-amber-100 [&>div]:bg-amber-500" : "[&>div]:bg-primary")} />
             </div>
-            <p className="text-xs text-muted-foreground italic">
+            <p className={cn("text-xs font-medium italic text-center px-4", stats.budgetHealth > 100 ? "text-rose-500" : "text-muted-foreground")}>
               {stats.budgetHealth > 100 ? "Atenção: Orçamento excedido!" : "Comprometimento saudável."}
             </p>
           </CardContent>
         </Card>
 
-        {/* Progresso do Mês */}
-        <Card className="border-slate-200 shadow-sm relative overflow-hidden">
+        {/* Progresso do Mês - Visual Radial */}
+        <Card className="border-slate-200 shadow-sm relative overflow-hidden flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <CalendarCheck className="h-5 w-5 text-indigo-500" />
@@ -264,30 +281,44 @@ export default function DashboardPage() {
                     <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[200px]">
-                    <p>Compara quanto tempo do mês já passou com quanto você já gastou.</p>
+                    <p>Compara quanto tempo do mês já passou em relação aos dias totais.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </CardTitle>
             <CardDescription>Tempo decorrido no mês.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Dias passados</span>
-                <span className="font-bold">{stats.timeProgress.toFixed(0)}%</span>
+          <CardContent className="flex-1 flex flex-col items-center justify-center space-y-2">
+            <div className="h-[180px] w-full relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadialBarChart 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius="70%" 
+                  outerRadius="100%" 
+                  barSize={12} 
+                  data={[{ value: stats.timeProgress, fill: '#6366f1' }]} 
+                  startAngle={90} 
+                  endAngle={-270}
+                >
+                  <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                  <RadialBar background dataKey="value" cornerRadius={6} />
+                </RadialBarChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-black text-indigo-600">{stats.timeProgress.toFixed(0)}%</span>
+                <span className="text-[10px] uppercase text-muted-foreground font-bold">Dias</span>
               </div>
-              <Progress value={stats.timeProgress} className="h-2 bg-indigo-100 [&>div]:bg-indigo-500" />
             </div>
-            <p className="text-xs text-muted-foreground">
-              {stats.timeProgress > stats.budgetHealth ? "Gastos sob controle." : "Alerta de evolução rápida."}
+            <p className="text-xs text-muted-foreground italic text-center px-4">
+              {stats.timeProgress > stats.budgetHealth ? "Gastos sob controle para o período." : "Alerta de evolução rápida de gastos."}
             </p>
           </CardContent>
         </Card>
 
         {/* Próximos Vencimentos */}
         <Link href="/dashboard/despesas" className="block transition-transform hover:scale-[1.01] active:scale-[0.99]">
-          <Card className="border-primary/20 shadow-md h-full bg-primary/[0.02] overflow-hidden group">
+          <Card className="border-primary/20 shadow-md h-full bg-primary/[0.02] overflow-hidden group flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-bold flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -298,7 +329,7 @@ export default function DashboardPage() {
               </CardTitle>
               <CardDescription>Próximas 5 contas pendentes.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 flex flex-col">
               {isLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-10 w-full" />
@@ -330,8 +361,8 @@ export default function DashboardPage() {
                   })}
                 </div>
               ) : (
-                <div className="flex h-20 items-center justify-center text-xs text-muted-foreground italic">
-                  Tudo em dia! Nenhuma conta pendente.
+                <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground italic text-center p-4">
+                  Tudo em dia! Nenhuma conta pendente para este mês.
                 </div>
               )}
             </CardContent>

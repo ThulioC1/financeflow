@@ -132,17 +132,12 @@ export default function DashboardPage() {
     result.totalGasto = selExpenses.filter(e => e.status === 'pago').reduce((acc, e) => acc + e.valor, 0);
     result.totalPendente = selExpenses.filter(e => e.status === 'pendente').reduce((acc, e) => acc + e.valor, 0);
     
-    // O Saldo Livre agora reflete o saldo real na conta (considerando histórico e recebidos) 
-    // menos o que já foi pago e o que está reservado nos cofrinhos.
-    // As despesas pendentes não saíram da conta ainda, por isso não são subtraídas do "hoje".
     result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
     result.currentMonthExpenses = selExpenses;
 
-    // Saúde do orçamento: % da renda gasta (Pagos + Pendentes)
     const totalCommitment = result.totalGasto + result.totalPendente;
     result.budgetHealth = result.totalRecebido > 0 ? (totalCommitment / result.totalRecebido) * 100 : 0;
 
-    // Progresso do mês em dias
     const today = new Date();
     if (selectedMonth === today.toISOString().slice(0, 7)) {
       const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
@@ -191,7 +186,7 @@ export default function DashboardPage() {
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
         ) : (
           <>
-            <StatCard title="Saldo Livre" value={formatCurrency(result.saldoAtual)} icon={Wallet} description="Dinheiro disponível hoje" color="bg-primary shadow-primary/20" info="Reflete o dinheiro em conta hoje, descontando o que já foi pago e os cofrinhos. Contas pendentes não são subtraídas pois o dinheiro ainda não saiu da sua conta." />
+            <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Dinheiro disponível hoje" color="bg-primary shadow-primary/20" info="Reflete o dinheiro em conta hoje, descontando o que já foi pago e os cofrinhos. Contas pendentes não são subtraídas pois o dinheiro ainda não saiu da sua conta." />
             <StatCard title="Receitas" value={formatCurrency(stats.totalRecebido)} icon={ArrowUpRight} description="Total recebido" color="bg-emerald-500 shadow-emerald-200" info="Soma das rendas marcadas como pagas no mês selecionado." />
             <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total pago" color="bg-rose-500 shadow-rose-200" info="Total de gastos já marcados como pagos." />
             <StatCard title="A Pagar" value={formatCurrency(stats.totalPendente)} icon={Clock} description="Aguardando pagamento" color="bg-amber-500 shadow-amber-200" info="Gastos pendentes para este mês." />
@@ -200,7 +195,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Seção de Saúde Financeira */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card className="border-slate-200 shadow-sm relative overflow-hidden">
           <CardHeader className="pb-2">

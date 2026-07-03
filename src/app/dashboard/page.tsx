@@ -207,9 +207,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {isLoading ? (
-          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
+          Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
         ) : (
           <>
             <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Dinheiro disponível hoje" color="bg-primary shadow-primary/20" info="Reflete o dinheiro em conta hoje, descontando o que já foi pago e os cofrinhos. Contas pendentes não são subtraídas pois o dinheiro ainda não saiu da sua conta." />
@@ -217,11 +217,48 @@ export default function DashboardPage() {
             <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total pago" color="bg-rose-500 shadow-rose-200" info="Total de gastos já marcados como pagos." />
             <StatCard title="A Pagar" value={formatCurrency(stats.totalPendente)} icon={Clock} description="Aguardando pagamento" color="bg-amber-500 shadow-amber-200" info="Gastos pendentes para este mês." />
             <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Entradas - Pagos" color="bg-blue-600 shadow-blue-200" info="Diferença entre o recebido e o efetivamente pago." />
+            
+            {/* Próximos Vencimentos - Movido para ficar após o balanço no mobile */}
+            <Link href="/dashboard/despesas" className="block transition-transform hover:scale-[1.01] active:scale-[0.99] group">
+              <Card className="border-primary/20 shadow-md h-full bg-primary/[0.02] overflow-hidden flex flex-col">
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-sm font-bold flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-rose-500" />
+                      Vencimentos
+                    </div>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 flex-1 flex flex-col">
+                  {stats.upcomingExpenses.length > 0 ? (
+                    <div className="space-y-2">
+                      {stats.upcomingExpenses.slice(0, 3).map((expense) => {
+                        const isOverdue = (expense.dataVencimento?.toMillis() || 0) < Date.now();
+                        return (
+                          <div key={expense.id} className="flex items-center justify-between gap-2 text-[11px] border-b border-dashed pb-1 last:border-0 last:pb-0">
+                            <span className="font-medium truncate max-w-[80px]">{expense.descricao}</span>
+                            <span className={cn("font-bold whitespace-nowrap", isOverdue ? "text-rose-600" : "text-muted-foreground")}>
+                              {expense.dataVencimento?.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                            </span>
+                            <span className="font-bold ml-auto">{formatCurrency(expense.valor)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-[10px] text-muted-foreground italic text-center">
+                      Tudo em dia!
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
           </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Consumo da Renda - Visual Radial */}
         <Card className="border-slate-200 shadow-sm relative overflow-hidden flex flex-col">
           <CardHeader className="pb-2">
@@ -315,59 +352,6 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-
-        {/* Próximos Vencimentos */}
-        <Link href="/dashboard/despesas" className="block transition-transform hover:scale-[1.01] active:scale-[0.99]">
-          <Card className="border-primary/20 shadow-md h-full bg-primary/[0.02] overflow-hidden group flex flex-col">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-bold flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-rose-500" />
-                  Próximos Vencimentos
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-              </CardTitle>
-              <CardDescription>Próximas 5 contas pendentes.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              {isLoading ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              ) : stats.upcomingExpenses.length > 0 ? (
-                <div className="space-y-3">
-                  {stats.upcomingExpenses.map((expense) => {
-                    const isOverdue = (expense.dataVencimento?.toMillis() || 0) < Date.now();
-                    return (
-                      <div key={expense.id} className="flex items-center justify-between gap-2 text-sm border-b border-dashed pb-2 last:border-0">
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-bold truncate">{expense.descricao}</span>
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4" style={{ borderColor: CATEGORY_COLORS[expense.categoria], color: CATEGORY_COLORS[expense.categoria] }}>
-                              {expense.categoria}
-                            </Badge>
-                            <span className={cn("text-[10px] flex items-center gap-1", isOverdue ? "text-rose-600 font-bold" : "text-muted-foreground")}>
-                              {isOverdue && <AlertCircle className="h-2.5 w-2.5" />}
-                              {expense.dataVencimento?.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="font-mono font-bold text-xs whitespace-nowrap">
-                          {formatCurrency(expense.valor)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground italic text-center p-4">
-                  Tudo em dia! Nenhuma conta pendente para este mês.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

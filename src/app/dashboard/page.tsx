@@ -14,7 +14,6 @@ import {
   Activity,
   CalendarCheck,
   ChevronRight,
-  AlertCircle
 } from 'lucide-react';
 import {
     Select,
@@ -39,7 +38,6 @@ import { collection } from 'firebase/firestore';
 import type { Income, Expense, PiggyBank } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import {
   Tooltip,
   TooltipProvider,
@@ -47,7 +45,6 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
 const formatCurrency = (value: number) => {
@@ -129,12 +126,10 @@ export default function DashboardPage() {
     if (banks) result.totalCofrinhos = banks.reduce((acc, b) => acc + (Number(b.valorAtual) || 0), 0);
     if (!incomes || !expenses) return result;
     
-    // Calcula Saldo Inicial (meses anteriores)
     const previousIncomes = incomes.filter(i => i.mesReferencia < selectedMonth && i.status === 'pago');
     const previousExpenses = expenses.filter(e => e.mesReferencia < selectedMonth && e.status === 'pago');
     result.saldoInicial = previousIncomes.reduce((acc, i) => acc + i.valor, 0) - previousExpenses.reduce((acc, e) => acc + e.valor, 0);
 
-    // Dados do mês selecionado
     const selIncomes = incomes.filter(i => i.mesReferencia === selectedMonth);
     const selExpenses = expenses.filter(e => e.mesReferencia === selectedMonth);
 
@@ -143,11 +138,9 @@ export default function DashboardPage() {
     result.totalGasto = selExpenses.filter(e => e.status === 'pago').reduce((acc, e) => acc + e.valor, 0);
     result.totalPendente = selExpenses.filter(e => e.status === 'pendente').reduce((acc, e) => acc + e.valor, 0);
     
-    // Saldo Livre = (Saldo Anterior + O que recebi hoje - O que já paguei) - O que está no cofre
     result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
     result.currentMonthExpenses = selExpenses;
 
-    // Próximas 5 contas a vencer (pendentes com data de vencimento)
     result.upcomingExpenses = expenses
       .filter(e => e.status === 'pendente' && e.dataVencimento)
       .sort((a, b) => {
@@ -157,12 +150,10 @@ export default function DashboardPage() {
       })
       .slice(0, 5);
 
-    // Comprometimento da Renda
     const totalCommitment = result.totalGasto + result.totalPendente;
     const baseRenda = result.totalReceitaPrevista > 0 ? result.totalReceitaPrevista : (result.saldoInicial > 0 ? result.saldoInicial : 0);
     result.budgetHealth = baseRenda > 0 ? (totalCommitment / baseRenda) * 100 : 0;
 
-    // Progresso do tempo no mês
     const today = new Date();
     if (selectedMonth === today.toISOString().slice(0, 7)) {
       const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
@@ -171,7 +162,6 @@ export default function DashboardPage() {
       result.timeProgress = 100;
     }
 
-    // Dados para o gráfico diário
     const dailyMap: Record<number, any> = {};
     const categoriesSet = new Set<string>();
     selExpenses.forEach(exp => {
@@ -207,9 +197,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {isLoading ? (
-          Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
+          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[120px] rounded-2xl" />)
         ) : (
           <>
             <StatCard title="Saldo Livre" value={formatCurrency(stats.saldoAtual)} icon={Wallet} description="Dinheiro disponível hoje" color="bg-primary shadow-primary/20" info="Reflete o dinheiro em conta hoje, descontando o que já foi pago e os cofrinhos. Contas pendentes não são subtraídas pois o dinheiro ainda não saiu da sua conta." />
@@ -217,49 +207,59 @@ export default function DashboardPage() {
             <StatCard title="Despesas" value={formatCurrency(stats.totalGasto)} icon={ArrowDownRight} description="Total pago" color="bg-rose-500 shadow-rose-200" info="Total de gastos já marcados como pagos." />
             <StatCard title="A Pagar" value={formatCurrency(stats.totalPendente)} icon={Clock} description="Aguardando pagamento" color="bg-amber-500 shadow-amber-200" info="Gastos pendentes para este mês." />
             <StatCard title="Balanço" value={formatCurrency(stats.totalRecebido - stats.totalGasto)} icon={BarChart3} description="Entradas - Pagos" color="bg-blue-600 shadow-blue-200" info="Diferença entre o recebido e o efetivamente pago." />
-            
-            {/* Próximos Vencimentos - Movido para ficar após o balanço no mobile */}
-            <Link href="/dashboard/despesas" className="block transition-transform hover:scale-[1.01] active:scale-[0.99] group">
-              <Card className="border-primary/20 shadow-md h-full bg-primary/[0.02] overflow-hidden flex flex-col">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-sm font-bold flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-rose-500" />
-                      Vencimentos
-                    </div>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 flex-1 flex flex-col">
-                  {stats.upcomingExpenses.length > 0 ? (
-                    <div className="space-y-2">
-                      {stats.upcomingExpenses.slice(0, 3).map((expense) => {
-                        const isOverdue = (expense.dataVencimento?.toMillis() || 0) < Date.now();
-                        return (
-                          <div key={expense.id} className="flex items-center justify-between gap-2 text-[11px] border-b border-dashed pb-1 last:border-0 last:pb-0">
-                            <span className="font-medium truncate max-w-[80px]">{expense.descricao}</span>
-                            <span className={cn("font-bold whitespace-nowrap", isOverdue ? "text-rose-600" : "text-muted-foreground")}>
-                              {expense.dataVencimento?.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                            </span>
-                            <span className="font-bold ml-auto">{formatCurrency(expense.valor)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center text-[10px] text-muted-foreground italic text-center">
-                      Tudo em dia!
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
           </>
         )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Consumo da Renda - Visual Radial */}
+        {/* Próximos Vencimentos - Agora posicionado à frente dos indicadores de consumo */}
+        <Link href="/dashboard/despesas" className="block transition-transform hover:scale-[1.01] active:scale-[0.99] group h-full">
+          <Card className="border-slate-200 shadow-sm h-full bg-card overflow-hidden flex flex-col">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-rose-500" />
+                  Próximos Vencimentos
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+              </CardTitle>
+              <CardDescription>Contas pendentes mais próximas.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col pt-2">
+              {isLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : stats.upcomingExpenses.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.upcomingExpenses.map((expense) => {
+                    const isOverdue = (expense.dataVencimento?.toMillis() || 0) < Date.now();
+                    return (
+                      <div key={expense.id} className="flex items-center justify-between gap-3 text-sm border-b border-dashed pb-2 last:border-0 last:pb-0">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold truncate">{expense.descricao}</span>
+                          <span className={cn("text-[10px] font-medium", isOverdue ? "text-rose-600" : "text-muted-foreground")}>
+                            {isOverdue ? 'Atrasado: ' : 'Vence: '}
+                            {expense.dataVencimento?.toDate().toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                        <span className="font-black whitespace-nowrap text-primary">{formatCurrency(expense.valor)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-sm text-muted-foreground italic text-center py-8">
+                  <p>Tudo em dia!</p>
+                  <p className="text-[10px]">Nenhuma conta pendente com vencimento.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* Consumo da Renda */}
         <Card className="border-slate-200 shadow-sm relative overflow-hidden flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -306,7 +306,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Progresso do Mês - Visual Radial */}
+        {/* Progresso do Mês */}
         <Card className="border-slate-200 shadow-sm relative overflow-hidden flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2">

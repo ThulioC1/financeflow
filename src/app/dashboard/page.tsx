@@ -38,9 +38,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
+  TooltipContent,
 } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 
@@ -107,6 +107,7 @@ export default function DashboardPage() {
     const result = {
       saldoInicial: 0,
       totalRecebido: 0,
+      totalReceitaPrevista: 0,
       totalGasto: 0,
       totalPendente: 0,
       saldoAtual: 0,
@@ -121,23 +122,31 @@ export default function DashboardPage() {
     if (banks) result.totalCofrinhos = banks.reduce((acc, b) => acc + (Number(b.valorAtual) || 0), 0);
     if (!incomes || !expenses) return result;
     
+    // Calcula Saldo Inicial (meses anteriores)
     const previousIncomes = incomes.filter(i => i.mesReferencia < selectedMonth && i.status === 'pago');
     const previousExpenses = expenses.filter(e => e.mesReferencia < selectedMonth && e.status === 'pago');
     result.saldoInicial = previousIncomes.reduce((acc, i) => acc + i.valor, 0) - previousExpenses.reduce((acc, e) => acc + e.valor, 0);
 
-    const selIncomes = incomes.filter(i => i.mesReferencia === selectedMonth && i.status === 'pago');
+    // Dados do mês selecionado
+    const selIncomes = incomes.filter(i => i.mesReferencia === selectedMonth);
     const selExpenses = expenses.filter(e => e.mesReferencia === selectedMonth);
 
-    result.totalRecebido = selIncomes.reduce((acc, i) => acc + i.valor, 0);
+    result.totalRecebido = selIncomes.filter(i => i.status === 'pago').reduce((acc, i) => acc + i.valor, 0);
+    result.totalReceitaPrevista = selIncomes.reduce((acc, i) => acc + i.valor, 0);
     result.totalGasto = selExpenses.filter(e => e.status === 'pago').reduce((acc, e) => acc + e.valor, 0);
     result.totalPendente = selExpenses.filter(e => e.status === 'pendente').reduce((acc, e) => acc + e.valor, 0);
     
+    // Saldo Livre = (Saldo Anterior + O que recebi hoje - O que já paguei) - O que está no cofre
     result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
     result.currentMonthExpenses = selExpenses;
 
+    // Comprometimento da Renda (Gastos / Renda Total do Mês)
+    // Usamos a receita prevista para não distorcer o gráfico antes do salário cair
     const totalCommitment = result.totalGasto + result.totalPendente;
-    result.budgetHealth = result.totalRecebido > 0 ? (totalCommitment / result.totalRecebido) * 100 : 0;
+    const baseRenda = result.totalReceitaPrevista > 0 ? result.totalReceitaPrevista : (result.saldoInicial > 0 ? result.saldoInicial : 0);
+    result.budgetHealth = baseRenda > 0 ? (totalCommitment / baseRenda) * 100 : 0;
 
+    // Progresso do tempo no mês
     const today = new Date();
     if (selectedMonth === today.toISOString().slice(0, 7)) {
       const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
@@ -146,6 +155,7 @@ export default function DashboardPage() {
       result.timeProgress = 100;
     }
 
+    // Dados para o gráfico diário
     const dailyMap: Record<number, any> = {};
     const categoriesSet = new Set<string>();
     selExpenses.forEach(exp => {
@@ -207,27 +217,29 @@ export default function DashboardPage() {
                     <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[200px]">
-                    <p>Mede quanto da sua renda já foi consumida por despesas totais (pagas + pendentes).</p>
+                    <p>Mede quanto da sua renda prevista (e economias) já foi consumida por despesas totais (pagas + pendentes).</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </CardTitle>
-            <CardDescription>Quanto da sua renda já está comprometida.</CardDescription>
+            <CardDescription>Comprometimento do seu orçamento mensal.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Gastos totais vs Renda</span>
+                <span className="text-muted-foreground">Gastos totais vs Renda Prevista</span>
                 <span className="font-bold">{stats.budgetHealth.toFixed(1)}%</span>
               </div>
               <Progress value={stats.budgetHealth} className={cn("h-2", stats.budgetHealth > 90 ? "bg-red-100 [&>div]:bg-red-500" : stats.budgetHealth > 70 ? "bg-amber-100 [&>div]:bg-amber-500" : "[&>div]:bg-primary")} />
             </div>
             <p className="text-xs text-muted-foreground italic">
               {stats.budgetHealth > 100 
-                ? "Atenção: Você gastou mais do que recebeu este mês!" 
+                ? (stats.saldoInicial + stats.totalRecebido > stats.totalGasto + stats.totalPendente 
+                    ? "Suas despesas mensais excederam a renda do mês, mas suas economias cobrem a diferença." 
+                    : "Atenção: Você comprometeu mais do que o total disponível!") 
                 : stats.budgetHealth > 80 
-                ? "Cuidado: Seu orçamento está quase no limite." 
-                : "Seu orçamento está saudável."}
+                ? "Cuidado: Seu orçamento está quase no limite da renda mensal." 
+                : "Seu comprometimento mensal está saudável."}
             </p>
           </CardContent>
         </Card>

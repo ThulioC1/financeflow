@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -13,7 +12,9 @@ import {
   Clock,
   Info,
   Activity,
-  CalendarCheck
+  CalendarCheck,
+  ChevronRight,
+  AlertCircle
 } from 'lucide-react';
 import {
     Select,
@@ -43,6 +44,8 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -117,6 +120,7 @@ export default function DashboardPage() {
       dailyExpenses: [] as any[],
       foundCategories: [] as string[],
       currentMonthExpenses: [] as Expense[],
+      upcomingExpenses: [] as Expense[],
     };
 
     if (banks) result.totalCofrinhos = banks.reduce((acc, b) => acc + (Number(b.valorAtual) || 0), 0);
@@ -140,8 +144,17 @@ export default function DashboardPage() {
     result.saldoAtual = (result.saldoInicial + result.totalRecebido - result.totalGasto) - result.totalCofrinhos;
     result.currentMonthExpenses = selExpenses;
 
-    // Comprometimento da Renda (Gastos / Renda Total do Mês)
-    // Usamos a receita prevista para não distorcer o gráfico antes do salário cair
+    // Próximas 5 contas a vencer (pendentes com data de vencimento)
+    result.upcomingExpenses = expenses
+      .filter(e => e.status === 'pendente' && e.dataVencimento)
+      .sort((a, b) => {
+        const dateA = a.dataVencimento?.toMillis() || 0;
+        const dateB = b.dataVencimento?.toMillis() || 0;
+        return dateA - dateB;
+      })
+      .slice(0, 5);
+
+    // Comprometimento da Renda
     const totalCommitment = result.totalGasto + result.totalPendente;
     const baseRenda = result.totalReceitaPrevista > 0 ? result.totalReceitaPrevista : (result.saldoInicial > 0 ? result.saldoInicial : 0);
     result.budgetHealth = baseRenda > 0 ? (totalCommitment / baseRenda) * 100 : 0;
@@ -205,7 +218,8 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* Consumo da Renda */}
         <Card className="border-slate-200 shadow-sm relative overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -222,28 +236,23 @@ export default function DashboardPage() {
                 </Tooltip>
               </TooltipProvider>
             </CardTitle>
-            <CardDescription>Comprometimento do seu orçamento mensal.</CardDescription>
+            <CardDescription>Comprometimento do orçamento.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Gastos totais vs Renda Prevista</span>
+                <span className="text-muted-foreground">Gastos vs Renda</span>
                 <span className="font-bold">{stats.budgetHealth.toFixed(1)}%</span>
               </div>
               <Progress value={stats.budgetHealth} className={cn("h-2", stats.budgetHealth > 90 ? "bg-red-100 [&>div]:bg-red-500" : stats.budgetHealth > 70 ? "bg-amber-100 [&>div]:bg-amber-500" : "[&>div]:bg-primary")} />
             </div>
             <p className="text-xs text-muted-foreground italic">
-              {stats.budgetHealth > 100 
-                ? (stats.saldoInicial + stats.totalRecebido > stats.totalGasto + stats.totalPendente 
-                    ? "Suas despesas mensais excederam a renda do mês, mas suas economias cobrem a diferença." 
-                    : "Atenção: Você comprometeu mais do que o total disponível!") 
-                : stats.budgetHealth > 80 
-                ? "Cuidado: Seu orçamento está quase no limite da renda mensal." 
-                : "Seu comprometimento mensal está saudável."}
+              {stats.budgetHealth > 100 ? "Atenção: Orçamento excedido!" : "Comprometimento saudável."}
             </p>
           </CardContent>
         </Card>
 
+        {/* Progresso do Mês */}
         <Card className="border-slate-200 shadow-sm relative overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -255,12 +264,12 @@ export default function DashboardPage() {
                     <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[200px]">
-                    <p>Compara quanto tempo do mês já passou com quanto você já gastou. Idealmente, o tempo deve passar mais rápido que os gastos.</p>
+                    <p>Compara quanto tempo do mês já passou com quanto você já gastou.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </CardTitle>
-            <CardDescription>Tempo decorrido vs Gastos realizados.</CardDescription>
+            <CardDescription>Tempo decorrido no mês.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -271,12 +280,63 @@ export default function DashboardPage() {
               <Progress value={stats.timeProgress} className="h-2 bg-indigo-100 [&>div]:bg-indigo-500" />
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.timeProgress > stats.budgetHealth 
-                ? "Bom trabalho! Seus gastos estão crescendo mais devagar que o tempo." 
-                : "Alerta: Seus gastos estão evoluindo mais rápido que os dias do mês."}
+              {stats.timeProgress > stats.budgetHealth ? "Gastos sob controle." : "Alerta de evolução rápida."}
             </p>
           </CardContent>
         </Card>
+
+        {/* Próximos Vencimentos */}
+        <Link href="/dashboard/despesas" className="block transition-transform hover:scale-[1.01] active:scale-[0.99]">
+          <Card className="border-primary/20 shadow-md h-full bg-primary/[0.02] overflow-hidden group">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-rose-500" />
+                  Próximos Vencimentos
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+              </CardTitle>
+              <CardDescription>Próximas 5 contas pendentes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : stats.upcomingExpenses.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.upcomingExpenses.map((expense) => {
+                    const isOverdue = (expense.dataVencimento?.toMillis() || 0) < Date.now();
+                    return (
+                      <div key={expense.id} className="flex items-center justify-between gap-2 text-sm border-b border-dashed pb-2 last:border-0">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold truncate">{expense.descricao}</span>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4" style={{ borderColor: CATEGORY_COLORS[expense.categoria], color: CATEGORY_COLORS[expense.categoria] }}>
+                              {expense.categoria}
+                            </Badge>
+                            <span className={cn("text-[10px] flex items-center gap-1", isOverdue ? "text-rose-600 font-bold" : "text-muted-foreground")}>
+                              {isOverdue && <AlertCircle className="h-2.5 w-2.5" />}
+                              {expense.dataVencimento?.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="font-mono font-bold text-xs whitespace-nowrap">
+                          {formatCurrency(expense.valor)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex h-20 items-center justify-center text-xs text-muted-foreground italic">
+                  Tudo em dia! Nenhuma conta pendente.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -285,7 +345,7 @@ export default function DashboardPage() {
             <CardHeader className="bg-muted/30 border-b flex flex-row items-center justify-between">
               <div className="space-y-1">
                 <CardTitle className="text-lg font-bold">Resumo Diário</CardTitle>
-                <CardDescription>Gastos consolidados por categoria e dia.</CardDescription>
+                <CardDescription>Gastos consolidados por categoria.</CardDescription>
               </div>
               <TooltipProvider>
                 <Tooltip>
@@ -293,7 +353,7 @@ export default function DashboardPage() {
                     <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[250px]">
-                    <p>Mostra como seus gastos estão distribuídos ao longo dos dias do mês, categorizados por cor.</p>
+                    <p>Mostra como seus gastos estão distribuídos ao longo dos dias do mês.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

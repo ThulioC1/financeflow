@@ -52,14 +52,14 @@ listar os caminhos dos arquivos tocados; nunca apagar entradas anteriores.
 | Nome no blueprint | FinanceFlow (nome interno antigo) |
 | Diretório | `financeflow/` |
 | Repo git | `https://github.com/ThulioC1/financeflow.git` (branch `main`) |
-| Versão | `0.2.5` — fonte de verdade: `src/lib/version.ts` + `package.json` (manter sincronizados) |
+| Versão | `0.2.6` — fonte de verdade: `src/lib/version.ts` + `package.json` (manter sincronizados) |
 | Locale | pt-BR (strings, moeda BRL, datas, `lang="pt-BR"`) |
 | Stack | Next.js 14.2.35 (App Router) · React 18.3 · TypeScript 5 (strict) · Tailwind 3.4 · shadcn/ui |
 | Backend | Firebase 11 — Auth + Firestore (**client-side only**, sem Admin SDK) |
+| Deploy | **Vercel** (não Firebase App Hosting — `apphosting.yaml` e `.idx/dev.nix` são resíduo) |
 | IA | Genkit 1.27 + `@genkit-ai/google-genai`, modelo `googleai/gemini-2.5-flash` |
 | Gráficos | recharts 2.15 (uso direto, não via `ui/chart`) |
-| Deploy | Firebase App Hosting (`apphosting.yaml`, `maxInstances: 1`) |
-| Origem | Firebase Studio / IDX (`.idx/dev.nix`) |
+| Origem | Firebase Studio / IDX (`.idx/dev.nix`) — vestígio, o deploy real é Vercel |
 
 ## Comandos
 
@@ -151,6 +151,15 @@ Demais caminhos: deny implícito.
   Fluxo: escolher imagem → canvas reduz para JPEG (max 1600px, q=0.92) → `import()` dinâmico do
   `tesseract.js` (`createWorker('por', 1)`) → parser → form editável → "Aprovar e descontar"
   grava `Expense` com `status: 'pago'` (deduz o saldo automaticamente, saldo é derivado).
+- **Contrato `tesseract.js@7` CONFIRMADO** contra `src/createWorker.js` do pacote:
+  `createWorker(langs, oem, options)` · `worker.recognize(img)` → `{ data }` com `data.text` ·
+  `worker.terminate()`. No browser o `workerPath` padrão é
+  `https://cdn.jsdelivr.net/npm/tesseract.js@v7.0.0/dist/worker.min.js` (carregado via Blob),
+  e `langPath` também vai pro jsdelivr — ou seja, **depende de CDN em runtime**.
+- ⚠ **`createWorker` pode nunca resolver.** Em `createWorker.js` o bootstrap termina em
+  `.catch(() => {})`: se o worker não subir, a promise devolvida fica pendurada para sempre
+  (não é reject). Por isso existe o wrapper `withTimeout(90s)` no dialog — sem ele a tela
+  trava em "preparando" indefinidamente.
 - ⚠ **Rodada de OCR é lenta** (~3-15s) e a primeira vez baixa os `traineddata` (~15MB) de CDN.
 - ⚠ A imagem **nunca é persistida** — nem no Firestore, nem em disco.
 - Criado e **removido** no mesmo dia: `src/ai/flows/receipt-scanning.ts` (versão Gemini), abortada
@@ -273,9 +282,12 @@ Ordenadas por impacto.
 10. **12 primitivos shadcn sem uso + `lib/placeholder-images.ts` sem uso** (user-nav usa
     `picsum.photos`).
 11. **Wizard `handleDateChange`** ancorado ao meio-dia, repetido 4× — fonte de bug de fuso horário.
-12. **Disco E: quase cheio** (~814 MB livres de ~8 GB). `npm install` falha por falta de espaço;
-    `node_modules` está incompleto (511 pacotes, sem `.package-lock.json` interno). **Qualquer
-    verificação (`typecheck`, `lint`, `dev`) está bloqueada até liberar espaço.**
+12. **`node_modules` local está CORROMPIDO** (2026-10-16). A instalação morreu por falta de disco
+    no meio da extração: 511 pastas, **nenhuma com `package.json`**, sem `.package-lock.json`
+    interno, 0,13 GB. `next`, `react-dom`, `zod`, `tesseract.js` — todos inúteis. Consequência:
+    **`typecheck`, `lint` e `dev` locais continuam impossíveis.** A `C:` tem só ~1,6 GB livres e o
+    cache do npm em `C:\Users\...\AppData\Local\npm-cache` ocupa **11,5 GB**; a `G:` tem ~3 GB.
+    Um `npm cache clean --force` libera espaço para refazer a instalação.
 13. **Markups das páginas usam cores/shadows antigos hardcoded** (`border-slate-200`, `shadow-sm`,
     `bg-primary`, `bg-emerald-500`, `bg-rose-500`, `shadow-lg`, `transition-all` ×12) — ficaram de
     fora do escopo do redesenho v2 (que foi só tokens + primitivos). Vão precisar de passe para usar
@@ -285,11 +297,48 @@ Ordenadas por impacto.
 15. **Física do doc Apple não implementada** (§2-6): drag 1:1, momentum projection, velocity handoff,
     rubber-banding. Exige a lib `motion`, não instalável por falta de disco. Só faz sentido se
     algum gesto for introduzido no app.
+16. **Leitura de comprovante ainda não validada em produção.** Corrigido o "não aconteceu nada"
+    (ver `## Sessões` de 2026-10-16), mas o resultado do OCR em si ainda não foi visto funcionar
+    na Vercel. O dialog agora mostra o erro real e o texto bruto do OCR justamente para fechar
+    esse buraco no próximo teste. Depende de CDN (jsdelivr) para o core e o `traineddata`.
 
 ## Sessões
 
 > Entradas mais recentes primeiro. Formato:
 > `- **AAAA-MM-DD** — [tema] — arquivos tocados: `...` — decisões/pendências.`
+
+- **2026-10-16** — Bugfix: leitura de comprovante não fazia nada (deploy Vercel). Arquivos tocados:
+  `src/components/dashboard/receipt-upload-dialog.tsx` (reescrito no fluxo de OCR),
+  `src/lib/version.ts` + `package.json` (0.2.5 → 0.2.6), `.LLM`.
+
+  **Sintoma reportado:** escolheu a imagem do comprovante e nada aconteceu — sem preview, sem
+  spinner, sem toast, sem formulário.
+
+  **Quatro falhas independentes, todas corrigidas:**
+  1. O `<input type="file">` ficava **dentro do `DialogContent`**. Ao abrir o seletor nativo, o
+     portal do Radix desmonta a subtree e a armadilha de foco reage à troca de foco — o dialog
+     fechava e o evento `change` se perdia. Movido para fora do `DialogContent`, como irmão do
+     `DialogTrigger`, para nunca ser desmontado.
+  2. `onOpenChange` chamava `resetState()` a qualquer fechamento, jogando fora o download de
+     ~15MB em andamento. Agora `onInteractOutside`/`onEscapeKeyDown`/`onOpenChange` são
+     bloqueados enquanto `analyzing` — e existe um botão de fechar explícito.
+  3. **Dead-end de estado:** quando `result.valor <= 0`, o código fazia `form.reset()` e
+     `return` **sem** `setScanned`. O formulário nunca renderizava: preview visível, nada
+     editável, botão "Aprovar" inexistente. Agora `setScanned` é chamado sempre — o usuário
+     preenche o que faltou à mão.
+  4. **Falha silenciosa:** o `catch` mostrava um toast genérico e fazia `setPreviewUrl(null)`,
+     apagando a evidência. `TOAST_LIMIT = 1` no `use-toast` ainda pode engolir o aviso. Agora o
+     erro real vai para um `Alert` persistente dentro do dialog + toast de 10s, com o **texto
+     bruto do OCR** num `<details>` para diagnóstico.
+
+  **Adicionado:** `withTimeout(90s)` em cima de `createWorker` e `recognize` — o bootstrap do
+  `tesseract.js` termina em `.catch(() => {})`, então uma falha de worker deixava a promise
+  pendurada para sempre e a UI travava sem explicación. Também `OCR_STAGES`, que traduz cada
+  status do tesseract para texto (antes só `recognizing text` aparecia, com 0% durante todo o
+  download).
+
+  ⚠ **AINDA NÃO VALIDADO** — `node_modules` local está corrompido (pendência 12), então
+  `typecheck`/`lint` continuam sem rodar. O deploy na Vercel é o teste real agora.
 
 - **2026-10-15** — Redesenho visual v2 (Apple) via `.design_apple.md`. Arquivos tocados:
   `src/app/globals.css` (reescrito), `tailwind.config.ts` (reescrito), `src/app/layout.tsx`

@@ -48,6 +48,41 @@ import { format } from 'date-fns';
 const MAX_EDGE = 1600;
 const JPEG_QUALITY = 0.92;
 
+/**
+ * Orcamento total do OCR. A primeira leitura baixa ~15MB de traineddata do CDN,
+ * entao o limite e folgado — mas precisa existir: o `createWorker` do tesseract.js
+ * tem um `.catch(() => {})` no bootstrap e, se o worker nao subir, a promise
+ * simplesmente nunca resolve. Sem isso a UI fica travada em "preparando" para sempre.
+ */
+const OCR_TIMEOUT_MS = 90_000;
+
+/** Rotulos de progresso. O status tambem vira texto, para o usuario ver que a vida esta seguem. */
+const OCR_STAGES: Record<string, string> = {
+  'loading tesseract core': 'Baixando o motor de OCR...',
+  'initializing tesseract': 'Inicializando o motor...',
+  'loading language traineddata': 'Baixando o idioma (pt)...',
+  'loaded language traineddata': 'Idioma pronto.',
+  'initializing api': 'Preparando o reconhecimento...',
+  'recognizing text': 'Lendo o comprovante...',
+};
+
+/** Rejeita se a promise nao resolver dentro de `ms`, em vez de travar a tela. */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 const receiptFormSchema = z.object({
   descricao: z.string().min(2, { message: 'Descrição deve ter pelo menos 2 caracteres.' }),
   valor: z.coerce.number().positive({ message: 'Valor deve ser positivo.' }),
@@ -119,6 +154,9 @@ export function ReceiptUploadDialog({ children }: { children: React.ReactNode })
   const [scanned, setScanned] = useState<ParsedReceipt | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState('Preparando o OCR...');
+  const [ocrText, setOcrText] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -136,9 +174,14 @@ export function ReceiptUploadDialog({ children }: { children: React.ReactNode })
     setScanned(null);
     setAnalyzing(false);
     setProgress(0);
+    setStage('Preparando o OCR...');
+    setOcrText(null);
+    setScanError(null);
     setSaving(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  const openFilePicker = () => fileInputRef.current?.click();
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -155,52 +198,59 @@ export function ReceiptUploadDialog({ children }: { children: React.ReactNode })
 
     setAnalyzing(true);
     setScanned(null);
+    setScanError(null);
+    setOcrText(null);
     setProgress(0);
+    setStage('Preparando o OCR...');
 
     try {
       const { base64, previewUrl: url } = await optimizeImage(file);
       setPreviewUrl(url);
 
-      // Import dinâmico: tesseract.js usa APIs de browser e não deve entrar no bundle do servidor.
+      // Import dinamico: tesseract.js usa APIs de browser e nao deve entrar no bundle do servidor.
+      setStage('Carregando a biblioteca de OCR...');
       const { createWorker } = await import('tesseract.js');
 
-      const worker = await createWorker('por', 1, {
-        logger: (m: { status: string; progress: number }) => {
-          if (m.status === 'recognizing text') {
-            setProgress(Math.round(m.progress * 100));
-          }
-        },
-      });
+      setStage('Baixando o motor de OCR...');
+      const worker = await withTimeout(
+        createWorker('por', 1, {
+          logger: (m: { status: string; progress: number }) => {
+            const label = OCR_STAGES[m.status];
+            if (label) setStage(label);
+            // O progresso so avanca na fase de leitura; nas de download nao ha
+            // porcentagem confiavel, entao mantem o ultimo valor em vez de zerar.
+            if (m.status === 'recognizing text') {
+              setProgress(Math.round(m.progress * 100));
+            }
+          },
+        }),
+        OCR_TIMEOUT_MS,
+        'O OCR não respondeu a tempo. Verifique a conexão e tente de novo.',
+      );
 
-      let ocrText = '';
+      let text = '';
       try {
-        const { data } = await worker.recognize(base64);
-        ocrText = data?.text ?? '';
+        const { data } = await withTimeout(
+          worker.recognize(base64),
+          OCR_TIMEOUT_MS,
+          'A leitura do comprovante estourou o tempo limite.',
+        );
+        text = data?.text ?? '';
       } finally {
         await worker.terminate();
       }
 
-      if (!ocrText.trim()) {
+      setOcrText(text);
+
+      if (!text.trim()) {
         throw new Error('Nenhum texto reconhecido na imagem.');
       }
 
-      const result = parseReceiptText(ocrText);
+      const result = parseReceiptText(text);
 
-      if (result.valor <= 0) {
-        toast({
-          title: 'Valor não encontrado',
-          description:
-            'O OCR leu o comprovante, mas não achou um valor válido. Tente uma foto mais nítida ou preencha manualmente.',
-        });
-        form.reset({
-          descricao: result.descricao,
-          valor: 0,
-          categoria: result.categoria,
-          dataPagamento: parseLocalDate(result.dataTransacao) ?? new Date(),
-        });
-        return;
-      }
-
+      // Sempre abre o formulario editavel: mesmo sem valor, o usuario precisa poder
+      // preencher a mao. Antes deste `setScanned` o dialog ficava travado num limbo
+      // (preview visivel, formulario nunca aparecendo).
       setScanned(result);
       form.reset({
         descricao: result.descricao,
@@ -209,23 +259,31 @@ export function ReceiptUploadDialog({ children }: { children: React.ReactNode })
         dataPagamento: parseLocalDate(result.dataTransacao) ?? new Date(),
       });
 
-      if (result.confianca === 'baixa') {
+      if (result.valor <= 0) {
+        toast({
+          title: 'Valor não encontrado',
+          description:
+            'O OCR leu o comprovante, mas não achou um valor válido. Preencha o valor manualmente.',
+        });
+      } else if (result.confianca === 'baixa') {
         toast({
           title: 'Leitura com baixa confiança',
           description: 'Confira o valor antes de aprovar — o OCR pode ter errado.',
         });
       }
     } catch (error) {
-      console.error('Error reading receipt: ', error);
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Erro desconhecido ao ler a imagem.';
+      console.error('[comprovante] falha na leitura do OCR:', error);
+      setScanError(message);
       toast({
         title: 'Não foi possível ler o comprovante',
-        description:
-          error instanceof Error && error.message === 'Nenhum texto reconhecido na imagem.'
-            ? 'A imagem não tinha texto legível. Tente uma foto mais nítida.'
-            : 'Tente outra imagem. Se o erro persistir, reinstale as dependências (npm install).',
+        description: message,
         variant: 'destructive',
+        duration: 10000,
       });
-      setPreviewUrl(null);
     } finally {
       setAnalyzing(false);
       setProgress(0);
@@ -285,12 +343,33 @@ export function ReceiptUploadDialog({ children }: { children: React.ReactNode })
     <Dialog
       open={open}
       onOpenChange={(isOpen) => {
+        // Fechar no meio do OCR descartaria o download de ~15MB em andamento.
+        if (!isOpen && analyzing) return;
         if (!isOpen) resetState();
         setOpen(isOpen);
       }}
     >
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+
+      {/* Fora do DialogContent: o Radix desmonta a subtree ao fechar, e o evento `change` se perde. */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      <DialogContent
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(event) => {
+          // Perder o meio do OCR (download de ~15MB) nao pode custar o trabalho.
+          if (analyzing) event.preventDefault();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (analyzing) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ScanLine className="h-5 w-5 text-primary" />
@@ -301,16 +380,8 @@ export function ReceiptUploadDialog({ children }: { children: React.ReactNode })
           </DialogDescription>
         </DialogHeader>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-
         {!scanned && !analyzing && (
-          <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>
+          <Button variant="outline" className="w-full" onClick={openFilePicker}>
             <Upload className="mr-2 h-4 w-4" />
             Escolher imagem do comprovante
           </Button>
@@ -321,7 +392,8 @@ export function ReceiptUploadDialog({ children }: { children: React.ReactNode })
             <div className="flex items-center gap-3">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">
-                {progress > 0 ? `Lendo o comprovante... ${progress}%` : 'Preparando o OCR...'}
+                {stage}
+                {progress > 0 ? ` ${progress}%` : ''}
               </p>
             </div>
             <Progress value={progress} className="h-1.5" />
@@ -329,6 +401,27 @@ export function ReceiptUploadDialog({ children }: { children: React.ReactNode })
               O reconhecimento roda no seu aparelho. A primeira leitura baixa os dados do idioma.
             </p>
           </div>
+        )}
+
+        {/* Erro persistente: o toast expira em segundos e o sintoma era "nada aconteceu". */}
+        {scanError && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Falha na leitura</AlertTitle>
+            <AlertDescription>
+              <p>{scanError}</p>
+              {ocrText && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs">
+                    Ver o texto que o OCR leu ({ocrText.length} caracteres)
+                  </summary>
+                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all text-[11px] leading-snug">
+                    {ocrText}
+                  </pre>
+                </details>
+              )}
+            </AlertDescription>
+          </Alert>
         )}
 
         {previewUrl && (
@@ -445,7 +538,7 @@ export function ReceiptUploadDialog({ children }: { children: React.ReactNode })
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={openFilePicker}
                     disabled={saving}
                   >
                     <RefreshCw className="mr-2 h-4 w-4" />

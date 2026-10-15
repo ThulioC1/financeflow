@@ -35,11 +35,11 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
         className="opacity-40"
       />
       {/* Ponto de Ordem e Crescimento Verde - A Marca do Ca$hOrd */}
-      <circle cx="29" cy="11" r="4" fill="#10b981" stroke="white" strokeWidth="1.5" />
+      <circle cx="29" cy="11" r="4" fill="#1a9c6e" stroke="white" strokeWidth="1.5" />
       <defs>
         <linearGradient id="logo-grad-cashord-v2" x1="0" y1="0" x2="40" y2="40" gradientUnits='userSpaceOnUse'>
-          <stop stopColor="#3b82f6" />
-          <stop offset="1" stopColor="#1d4ed8" />
+          <stop stopColor="#3a3d45" />
+          <stop offset="1" stopColor="#15171c" />
         </linearGradient>
       </defs>
     </svg>

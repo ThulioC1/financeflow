@@ -44,7 +44,7 @@ export default function DashboardLayout({
       <Sidebar collapsible="icon" className="border-r border-sidebar-border">
         <SidebarHeader className="flex h-16 items-center px-4">
           <div className="flex items-center gap-3">
-            <Logo className="h-8 w-8 shrink-0 rounded-lg shadow-lg" />
+            <Logo className="h-8 w-8 shrink-0 rounded-lg" />
             <span className="font-headline text-xl font-bold tracking-tight text-sidebar-foreground group-data-[collapsible=icon]:hidden">
               Ca$h<span className="text-primary">Ord</span>
             </span>
@@ -90,7 +90,9 @@ export default function DashboardLayout({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="bg-background">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md md:px-6">
+        {/* Material leve: o conteúdo rola por baixo do chrome, e a separação
+            vem de um scroll edge em vez de divider duro (§12). */}
+        <header className="material-light sticky top-0 z-20 flex h-14 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="md:hidden" />
             <div className="hidden md:block">

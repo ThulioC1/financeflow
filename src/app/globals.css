@@ -1,68 +1,98 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    /* Neutros frios e levemente dessaturados. Nada de cinza puro:
+       o cinza puro é o que faz UI parecer "não-acabada". */
+    --background: 220 14% 97%;
+    --foreground: 220 13% 11%;
+
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 13% 11%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 142 71% 45%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
-    --radius: 0.75rem;
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 221 83% 53%;
+    --popover-foreground: 220 13% 11%;
+
+    /* Primário grafite, não azul. Ação primária em preto/branco é a linguagem
+       que a Apple usa desde iOS 7; azul saturado marca genérico de template. */
+    --primary: 220 13% 11%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 13% 95%;
+    --secondary-foreground: 220 13% 11%;
+
+    --muted: 220 13% 95%;
+    --muted-foreground: 220 7% 44%;
+
+    --accent: 220 13% 95%;
+    --accent-foreground: 220 13% 11%;
+
+    --destructive: 0 62% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Reservado para dado. Verde/vermelho nunca decorativo (Apple §16, Craft). */
+    --income: 152 52% 34%;
+    --expense: 0 62% 48%;
+
+    --border: 220 13% 90%;
+    --input: 220 13% 88%;
+    --ring: 220 13% 11%;
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 220 16% 11%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 220 16% 11%;
+    --sidebar-accent: 220 13% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 13% 18%;
+    --sidebar-ring: 220 13% 70%;
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 142 71% 45%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 224 76% 48%;
-    --sidebar-background: 222 47% 3%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 12%;
-    --sidebar-ring: 221 83% 53%;
+    --background: 220 16% 6%;
+    --foreground: 220 14% 96%;
+
+    --card: 220 15% 9%;
+    --card-foreground: 220 14% 96%;
+
+    --popover: 220 15% 9%;
+    --popover-foreground: 220 14% 96%;
+
+    /* Invertido: no escuro a ação primária é clara (como iOS dark). */
+    --primary: 220 14% 96%;
+    --primary-foreground: 220 16% 11%;
+
+    --secondary: 220 13% 16%;
+    --secondary-foreground: 220 14% 96%;
+
+    --muted: 220 13% 16%;
+    --muted-foreground: 220 9% 65%;
+
+    --accent: 220 13% 16%;
+    --accent-foreground: 220 14% 96%;
+
+    --destructive: 0 68% 56%;
+    --destructive-foreground: 220 16% 11%;
+
+    --income: 150 50% 55%;
+    --expense: 3 78% 66%;
+
+    --border: 220 13% 18%;
+    --input: 220 13% 20%;
+    --ring: 220 14% 70%;
+
+    --sidebar-background: 220 18% 7%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 220 18% 7%;
+    --sidebar-accent: 220 13% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 13% 15%;
+    --sidebar-ring: 220 13% 70%;
   }
 }
 
@@ -71,22 +101,166 @@
     @apply border-border;
     -webkit-tap-highlight-color: transparent;
   }
+
+  html {
+    /* Respeita Dynamic Type: espaçamento em rem, nunca px fixo (§15). */
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground font-body antialiased;
+    font-optical-sizing: auto;
     overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Tracking é específico por tamanho, nunca um valor único (§15).
+     Display/heading recebe tracking negativo; corpo fica perto de 0. */
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
+    letter-spacing: -0.018em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  h1 { letter-spacing: -0.026em; line-height: 1.1; }
+
+  /* Valores monetários alinham em coluna por naturezadecimal.
+     Regra tipográfica clássica — e é o que faz uma tela financeira parecer cuidada. */
+  .tabular,
+  input[type='number'],
+  input[type='month'],
+  input[type='date'] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Números grandes em cards de saldo: hierarquia tipográfica, não só tamanho. */
+  .numeric-display {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1;
   }
 }
 
+@layer components {
+  /**
+   * Feedback no press (§1). Responder no pointer-down, não no release —
+   * esperar o click é o que faz a interface parecer morta.
+   */
+  .pressable {
+    transition:
+      transform 150ms cubic-bezier(0.32, 0.72, 0, 1),
+      background-color 150ms ease-out,
+      border-color 150ms ease-out,
+      opacity 150ms ease-out;
+  }
+  .pressable:active {
+    transform: scale(0.975);
+  }
+
+  /**
+   * Camada translúcida: chrome flutuante com conteúdo rolando por baixo (§12).
+   * Peso do material codifica hierarquia — sidebar é o material mais pesado,
+   * toolbar é mais leve. Nunca empilhar translúcido sobre translúcido.
+   */
+  .material-light {
+    background: rgb(255 255 255 / 0.72);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgb(255 255 255 / 0.5);
+  }
+
+  .material-heavy {
+    background: rgb(250 250 251 / 0.82);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    backdrop-filter: blur(28px) saturate(160%);
+  }
+
+  .dark .material-light {
+    background: rgb(22 22 24 / 0.72);
+    border-bottom-color: rgb(255 255 255 / 0.08);
+  }
+
+  .dark .material-heavy {
+    background: rgb(14 14 16 / 0.86);
+  }
+
+  /**
+   * Scroll edge em vez de divider duro (§12): fade onde o conteúdo encontra
+   * o chrome flutuante, só onde há sobreposição real.
+   */
+  .scroll-edge {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 12px);
+    mask-image: linear-gradient(to bottom, transparent, black 12px);
+  }
+}
+
+/**
+ * §14 — Acessibilidade. Movimento reduzido não é "sem feedback", é um
+ * equivalente mais gentil: cross-fade em vez de slide/spring.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .pressable:active {
+    transform: none;
+  }
+}
+
+/** Superfície translúcida vira sólida quando a legibilidade está em risco. */
+@media (prefers-reduced-transparency: reduce) {
+  .material-light,
+  .material-heavy,
+  .dark .material-light,
+  .dark .material-heavy,
+  .glass-card {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: hsl(var(--card));
+  }
+
+  .dark .material-light,
+  .dark .material-heavy,
+  .dark .glass-card {
+    background: hsl(var(--card));
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: 220 13% 55%;
+    --muted-foreground: 220 13% 28%;
+  }
+
+  .dark {
+    --border: 220 13% 55%;
+    --muted-foreground: 220 14% 82%;
+  }
+
+  .card,
+  .material-light,
+  .material-heavy {
+    border-width: 1px;
+    border-color: hsl(var(--border));
+  }
+}
+
+/* Retido de uso anterior — mantido para não quebrar marcação existente,
+   mas reestilizado como superfície sólida em vez de glassmorphism+sombra funda. */
 .glass-card {
-  @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white/20 dark:border-slate-800 shadow-xl;
+  @apply bg-card border border-border shadow-sm;
 }
 
 .gradient-bg {
-  @apply bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900;
+  @apply bg-background;
 }
 
 @supports (padding: env(safe-area-inset-bottom)) {

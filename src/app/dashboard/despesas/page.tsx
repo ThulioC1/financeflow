@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, CheckCircle2, AlertTriangle, Search, FilterX } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, CheckCircle2, AlertTriangle, Search, FilterX, ScanLine } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -36,6 +36,7 @@ import { collection, doc, Timestamp, serverTimestamp } from "firebase/firestore"
 import { deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { AddExpenseDialog } from "@/components/dashboard/add-expense-dialog";
+import { ReceiptUploadDialog } from "@/components/dashboard/receipt-upload-dialog";
 import { EditExpenseDialog } from "@/components/dashboard/edit-expense-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -297,6 +298,7 @@ export default function DespesasPage() {
                 <SelectContent>{availableMonths.map(month => <SelectItem key={month} value={month}>{formatMonth(month)}</SelectItem>)}</SelectContent>
             </Select>
             <AddExpenseDialog><Button className="w-full sm:w-auto"><PlusCircle className="mr-2 h-4 w-4" />Adicionar</Button></AddExpenseDialog>
+            <ReceiptUploadDialog><Button variant="outline" className="w-full sm:w-auto"><ScanLine className="mr-2 h-4 w-4" />Comprovante</Button></ReceiptUploadDialog>
         </div>
       </header>
 

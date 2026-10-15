@@ -1,0 +1,342 @@
+# .LLM — Contexto e Histórico do Projeto
+
+> Arquivo de memória para agentes de IA. **Obrigatório em toda sessão.**
+> Formato: Markdown. Idioma: pt-BR (consistente com o projeto).
+
+---
+
+## PROTOCOLO — obrigatório
+
+**1. Início da sessão:** ler este arquivo INTEIRO antes de escrever qualquer código.
+Usar `## Pendências técnicas conhecidas` como backlog. Verificar se a última sessão deixou algo
+em aberto antes de iniciar trabalho novo.
+
+**2. Durante a sessão:** nenhuma alteração de código é considerada concluída enquanto não estiver
+registrada aqui. Isso vale para: features, refactors, bugfixes, renomeações, criação/remoção de
+arquivos, mudanças de schema Firestore, regras de segurança, deps, tokens de estilo, commands,
+e também mudanças de *documentação ou plano* (mesmo sem código).
+
+**3. Fim da sessão / após cada bloco de trabalho:** adicionar entrada em `## Sessões`
+(formato abaixo), sempre. Não encerrar a sessão sem isso.
+
+**4. Atualizar as seções estáticas** sempre que o fato mudar:
+`Identidade` (versão, stack) · `Arquitetura` (rotas, modelo de dados, IA) ·
+`Convenções de código` · `Pendências técnicas conhecidas` (marcar o que foi resolvido, remover
+o item e só reintroduzir se voltar a valer).
+
+### Formato de entrada em `## Sessões`
+
+```
+- **AAAA-MM-DD** — [tema curto] — arquivos tocados: `caminho/um.tsx`, `outro.ts` — o que foi feito e por quê — pendências abertas.
+```
+
+Regras: entradas **mais recentes primeiro**; uma entrada por bloco de trabalho coeso; sempre
+listar os caminhos dos arquivos tocados; nunca apagar entradas anteriores.
+
+### Regras Permanentais
+
+- **O `.LLM` é a fonte de verdade do estado do projeto**, junto com o git.
+- Nada de secrets, API keys ou tokens neste arquivo.
+- `src/lib/version.ts` e `package.json` devem ter a mesma versão; bumpar junto de qualquer
+  mudança visível ao usuário.
+- Antes de dar qualquer tarefa como concluída, releia o diff e confirme que o `.LLM` reflete o
+  que foi realmente feito.
+
+---
+
+## Identidade
+
+| Campo | Valor |
+|---|---|
+| Nome do produto | **Ca$hOrd** |
+| Nome no blueprint | FinanceFlow (nome interno antigo) |
+| Diretório | `financeflow/` |
+| Repo git | `https://github.com/ThulioC1/financeflow.git` (branch `main`) |
+| Versão | `0.2.5` — fonte de verdade: `src/lib/version.ts` + `package.json` (manter sincronizados) |
+| Locale | pt-BR (strings, moeda BRL, datas, `lang="pt-BR"`) |
+| Stack | Next.js 14.2.35 (App Router) · React 18.3 · TypeScript 5 (strict) · Tailwind 3.4 · shadcn/ui |
+| Backend | Firebase 11 — Auth + Firestore (**client-side only**, sem Admin SDK) |
+| IA | Genkit 1.27 + `@genkit-ai/google-genai`, modelo `googleai/gemini-2.5-flash` |
+| Gráficos | recharts 2.15 (uso direto, não via `ui/chart`) |
+| Deploy | Firebase App Hosting (`apphosting.yaml`, `maxInstances: 1`) |
+| Origem | Firebase Studio / IDX (`.idx/dev.nix`) |
+
+## Comandos
+
+```bash
+npm run dev        # next dev -p 9002
+npm run build      # ⚠ "NODE_ENV=production next build" — sintaxe POSIX, QUEBRA no Windows
+npm run lint       # next lint
+npm run typecheck  # tsc --noEmit
+```
+
+Sem suíte de testes. Sem `node_modules` instalado neste working copy.
+⚠ `next.config.js` define `typescript.ignoreBuildErrors: true` e ignora ESLint no build —
+**erros de tipo NÃO quebram o build**. Rodar `npm run typecheck` manualmente.
+
+## Arquitetura
+
+SPA client-side sobre listeners realtime do Firestore. Praticamente tudo é `'use client'`.
+Único Server Component: `src/app/layout.tsx`. Sem SSR de dados, sem route handlers, sem middleware.
+
+### Rotas
+
+| Rota | Arquivo | Função |
+|---|---|---|
+| `/` | `app/page.tsx` | Switchboard: redirect → `/dashboard` ou `/login` |
+| `/login` | `app/login/page.tsx` | Tela de auth (email/senha, Google popup, reset) |
+| `/dashboard` | `app/dashboard/page.tsx` | Visão geral — StatCards, próximos vencimentos, gráficos radiais |
+| `/dashboard/receitas` | `app/dashboard/receitas/page.tsx` | Lista de receitas |
+| `/dashboard/despesas` | `app/dashboard/despesas/page.tsx` | Despesas + projeção de recorrentes |
+| `/dashboard/agenda` | `app/dashboard/agenda/page.tsx` | Calendário mensal + iCal externo |
+| `/dashboard/cofrinhos` | `app/dashboard/cofrinhos/page.tsx` | CRUD de cofrinhos |
+| `/dashboard/historico` | `app/dashboard/historico/page.tsx` | Histórico mensal em accordion |
+| `/dashboard/perfil` | `app/dashboard/perfil/page.tsx` | Nome + foto |
+
+Guard de auth é **client-side** em `app/dashboard/layout.tsx` (`useEffect` → `/login`).
+
+### Camada de dados
+
+Padrão de caminho: **`users/{uid}/<subcolecao>/{docId}`**
+
+| Subcoleção | Interface TS |
+|---|---|
+| `users/{uid}` | `UserProfile` |
+| `users/{uid}/incomes` | `Income` |
+| `users/{uid}/expenses` | `Expense` |
+| `users/{uid}/piggy_banks` | `PiggyBank` |
+| `users/{uid}/events` | `CalendarEvent` |
+| `users/{uid}/external_calendars` | `ExternalCalendar` (interface inline em `agenda/page.tsx`) |
+| `users/{uid}/balances` | `Balance` — **coleção NUNCA usada** (histórico é derivado em memória) |
+
+- Barrel único: `import { ... } from '@/firebase'` (`src/firebase/index.ts`).
+- Hooks: `useFirebase()` `useAuth()` `useFirestore()` `useUser()` `useMemoFirebase()` `useCollection<T>()` `useDoc<T>()`.
+- Writes: `setDocumentNonBlocking` `addDocumentNonBlocking` `updateDocumentNonBlocking` `deleteDocumentNonBlocking`.
+- Erros: `FirestorePermissionError` → `errorEmitter` → `<FirebaseErrorListener/>` → `throw`.
+- IDs gerados no cliente com `crypto.randomUUID()`; `createdAt: serverTimestamp()`.
+
+**Padrão obrigatório de consumo** (repetido em todas as páginas):
+```ts
+const { user } = useUser();
+const db = useFirestore();
+const q = useMemoFirebase(() => user ? collection(db, 'users', user.uid, 'expenses') : null, [db, user]);
+const { data, isLoading } = useCollection<Expense>(q);
+```
+`useCollection` **lança erro** se a ref não foi memoizada com `useMemoFirebase`.
+
+### Regras de segurança (`firestore.rules`, 81 linhas)
+
+`rules_version = '2'`. Sem claims, sem roles. Padrão repetido por subcoleção:
+`get: isOwner` · `list: false` · `create: valida userId no body` · `update: idem` · `delete: isExistingOwner`.
+⚠ **Toda escrita precisa gravar `userId: user.uid` dentro do documento** — as regras validam isso.
+Demais caminhos: deny implícito.
+
+### IA (Genkit)
+
+- `src/ai/genkit-config.ts` — instância real, exporta `ai`. Server-only (sem `'use client'`).
+- `src/ai/genkit.ts` e `src/ai/ai-setup.ts` — **stubs deliberados** (renomeados para evitar conflito
+  de resolução do Webpack com o pacote npm `genkit`). Não remover.
+- `src/ai/flows/financial-advisor.ts` — `'use server'`, `analyzeFinances()`. Prompt pt-BR.
+- `src/ai/flows/balance-forecasting.ts` — `'use server'`, `forecastIncome()`. Prompt em inglês.
+- Server action: `src/app/actions/calendar-actions.ts` — `fetchExternalCalendarEvents()` com `ical.js`.
+
+### Leitura de comprovantes (OCR local — sem IA)
+
+- `src/lib/receipt-parser.ts` — heurísticas puras sobre o texto do OCR: `parseReceiptText()`,
+  `extractAmount()` (scoring por palavras como "valor"/"pagamento", descartando linhas com
+  "saldo"/"limite"/"cnpj"), `extractDate()` (dd/mm/aaaa), `extractDescription()`,
+  `guessCategory()` (keyword map das 10 categorias), `parseBrazilianNumber()`.
+  Exporta `RECEIPT_CATEGORIES` — **mais uma duplicação** da lista de categorias (ver pendência 3).
+- `src/components/dashboard/receipt-upload-dialog.tsx` — botão "Comprovante" em `/dashboard/despesas`.
+  Fluxo: escolher imagem → canvas reduz para JPEG (max 1600px, q=0.92) → `import()` dinâmico do
+  `tesseract.js` (`createWorker('por', 1)`) → parser → form editável → "Aprovar e descontar"
+  grava `Expense` com `status: 'pago'` (deduz o saldo automaticamente, saldo é derivado).
+- ⚠ **Rodada de OCR é lenta** (~3-15s) e a primeira vez baixa os `traineddata` (~15MB) de CDN.
+- ⚠ A imagem **nunca é persistida** — nem no Firestore, nem em disco.
+- Criado e **removido** no mesmo dia: `src/ai/flows/receipt-scanning.ts` (versão Gemini), abortada
+  porque o usuário **não tem chave de API de IA e não tem orçamento**.
+
+### Design system — v2 Apple (2026-10-15)
+
+Redesenho completo seguindo `.design_apple.md` (skill na raiz do repo). Objetivo declarado:
+**tirar a "cara de app gerado por IA"**. Doc Kennedy no `.LLM` ainda descreve o sistema v1.
+
+Tokens em `src/app/globals.css` (light + dark).
+
+**Principais viradas:**
+- **Fonte:** Poppins + PT Sans → **system font stack** (`-apple-system`/SF Pro, `Segoe UI Variable
+  Text`, Roboto). As webfonts foram **removidas** do `layout.tsx` (2 requests a menos no first paint).
+  `font-headline` continua existindo no config e resolve para a system font — assim todo o markup
+  existente (`font-headline`) mudou de cara sem ser tocado. `font-optical-sizing: auto` ativado (§15).
+- **Primary:** azul `#2563eb` → **grafite**. Light: `220 13% 11%` (quase preto). Dark: **invertido**
+  para `220 14% 96%` (quase branco), como iOS dark (§16 Familiarity).
+- **`accent` deixou de ser verde** e virou neutro — verde agora é **só para dado**, via tokens
+  semânticos novos `--income` / `--expense` (expostos como `text-income` / `text-expense`).
+  Cor decorativa em chrome rouba a leitura de número (§16 Craft).
+- **Raio:** `0.75rem` → `0.625rem`. `--radius` alimenta todo Card/Button/Input.
+- **Sombras:** escala redefinida inteira, mais rasa e curta. "Sombra funda e difusa lê como card
+  flutuante de demo". `shadow-lg` foi redefinido como sutil — os 10 usos existentes amoleceram
+  sozinhos sem tocar em markup.
+- **Motion:** tokens `ease-spring` (`cubic-bezier(0.32,0.72,0,1)`, a curva padrão do iOS),
+  `ease-spring-bounce`, `ease-emphasized` + durações `instant/quick/settled/deliberate`.
+  Keyframe `materialize-in` (blur + escala + opacidade juntos — superfície que *chega* como material).
+- **Utilitários novos:** `.pressable` (escala `0.975` no `:active`, §1), `.material-light`,
+  `.material-heavy` (`backdrop-filter: blur() saturate()`, §12), `.scroll-edge` (mask no lugar de
+  border, §12), `.numeric-display`, `.tabular`.
+- **Acessibilidade (§14):** `@media (prefers-reduced-motion|reduced-transparency|contrast: more)`
+  implementados **globalmente** — era o maior gap do projeto. Reduzido vira cross-fade sem
+  transform; transparência reduzida vira superfície sólida; contraste maior ganha borda definida.
+- **Tipografia (§15):** heading recebe tracking negativo (`-0.018em`, h1 `-0.026em`) e
+  `text-wrap: balance`; `tabular-nums` automático em `input[type=number|month|date]`.
+- **Dialog:** scrim `black/80` → `black/40` + blur; entra/sai **pela mesma direção** (§7) —
+  removido o slide diagonal cruzado que era tell de template; `ease-spring`.
+- **Sidebar:** material pesado (`bg-sidebar/85 backdrop-blur-2xl` + borda), press feedback nos
+  itens de menu.
+- **Logo:** gradiente azul→azul → grafite `#3a3d45`→`#15171c`; ponto verde `#10b981`→`#1a9c6e`.
+  Atualizado em `layout.tsx` (data URI), `components/icons.tsx`, e themeColor `#3b82f6`→`#f6f7f8`.
+  ⚠ Os `src/app/icon.svg` e `public/logo.svg` **ainda têm o azul antigo** — divergência pendente.
+- **`.glass-card` e `.gradient-bg`** foram reestilizados como superfície sólida neutra (mantidos
+  para não quebrar marcação existente).
+
+**⚠ NÃO VALIDADO** — `npm run typecheck` / `lint` / `dev` continuam impossíveis (disco cheio,
+`node_modules` incompleto). O `tailwind.config.ts` foi reescrito inteiro: as chaves novas
+(`transitionTimingFunction`, `transitionDuration`, `boxShadow`, keyframe `materialize-in`) só
+podem ser confirmadas compilando.
+
+**O que ficou de fora, deliberadamente:** a física do doc §2-6 (drag 1:1, `setPointerCapture`,
+momentum projection, velocity handoff, rubber-banding) exige a lib `motion` (Framer Motion), que
+**não pode ser instalada** com 814 MB livres. Além disso este app não tem gesto nenhum hoje
+(sem drag, swipe, flick ou carousel em uso), então a parte física é a de menor retorno. Reavaliar
+quando houver espaço em disco.
+
+### Configuração
+
+- `src/firebase/config.ts` — `firebaseConfig` **hardcoded** (fallback de dev).
+- `src/firebase/index.ts` — `initializeApp()` **sem argumentos**; depende da injeção de env vars do
+  App Hosting em produção. ⚠ **Não alterar**.
+- Nenhuma env var customizada é lida no código. `GEMINI_API_KEY` / `GOOGLE_AI_API_KEY` são
+  resolvidas pelo plugin mas não são usadas por nenhum fluxo ativo.
+- `.env.example` **criado** (2026-10-15) documentando `GEMINI_API_KEY`. `.env*` segue no `.gitignore`.
+
+### Design system — v1 (histórico, **substituído**)
+
+> Descreve o sistema até 2026-10-15. **Não usar como referência** — ver
+> `## Design system — v2 Apple`. Mantido só para histórico.
+
+Tokens em `src/app/globals.css` (light + dark).
+**Drift do blueprint:** `docs/blueprint.md` pede `#64B5F6` / `#F5F5F5` / `#A5D6A7`, mas o código
+usava `#3b82f6`→`#1d4ed8` e acento `#10b981`. Fontes: Poppins (headline) + PT Sans (body).
+Classes utilitárias: `.glass-card`, `.gradient-bg`, `.fixed-bottom`.
+`src/components/ui/badge.tsx` tem uma variante `success` fora do padrão shadcn.
+
+## Convenções de código
+
+- Alias `@/*` → `src/*`.
+- Componentes de app: `src/components/<domínio>/`, arquivo em **kebab-case**, **named export** (nunca default).
+  Padrões: `verb-noun-dialog.tsx`, `<thing>-card.tsx`, `<region>-nav.tsx`.
+  Interface de props `<Component>Props` declarada no próprio arquivo.
+  (Exceções legadas: `icons.tsx`, `FirebaseErrorListener.tsx` — PascalCase.)
+- `src/components/ui/` = shadcn/ui intocado (exceto `badge.tsx`). Usar `cn()` de `@/lib/utils`.
+- Tipos de domínio: **sempre** em `src/lib/types.ts`. Não criar types de domínio inline.
+- Schemas zod inline no arquivo que os usa (padrão atual do projeto).
+- Textos de UI sempre em pt-BR, dentro do JSX.
+- Server actions/flows: `'use server'`.
+
+## Pendências técnicas conhecidas
+
+Ordenadas por impacto.
+
+1. **Feature de IA inalcançável — e sem orçamento para destravá-la.** `AdvisorCard` e `ForecastCard`
+   existem mas **nenhuma página os renderiza**, então os dois flows Genkit nunca rodam.
+   `ForecastCard` ainda usa dados de exemplo de 2023. O usuário declarou explicitamente que
+   **não possui chave de API de IA e não tem funds**. Não sugerir Gemini/Claude para novas
+   features sem antes confirmar que há orçamento — a preferência atual é **local/offline**.
+2. **Sem `global-error.tsx`.** `FirebaseErrorListener.tsx` lança erros esperando esse arquivo;
+   hoje um erro de permissão vira runtime error cru.
+3. **Duplicação de helpers** (~150 linhas): `formatCurrency` em 7 arquivos, `formatMonth` em 4,
+   `formatDate` em 2, `CATEGORY_COLORS` em 3, `categories`/`CATEGORIES` em 4 (o 4º é
+   `receipt-parser.ts`), `getInitials` em 2, `handleDateChange` em 4. Criar `src/lib/format.ts`.
+4. **12 componentes shadcn não usados** (~900 linhas): `calendar`, `carousel`, `chart` (329 l.),
+   `checkbox`, `collapsible`, `menubar`, `popover`, `radio-group`, `scroll-area`, `sheet`,
+   `slider`, `table`. (`progress` saiu da lista em 2026-10-15, passou a ser usado pelo dialog
+   de comprovantes.)
+5. **`formatCurrency` divergente:** `cofrinhos/page.tsx` usa assinatura `formatCurrency(val)`,
+   as demais `formatCurrency(valor)`.
+6. **Hack `handleRefresh()`** em despesas/receitas/cofrinhos: reseta
+   `document.body.style.pointerEvents/overflow` e chama `router.refresh()` após 100 ms
+   (workaround de scroll-lock do Radix).
+7. **Sem `firebase.json`, `firestore.indexes.json` ou `.firebaserc`.** As rules são deployadas
+   out-of-band. Adicionar `where` + `orderBy` vai exigir índice composto.
+8. **`.idx/dev.nix` desabilita emuladores** (`detect = false`, projeto `demo-app`) — usa backend
+   de produção em desenvolvimento.
+9. **`"build"` quebra no Windows** (prefixo POSIX `NODE_ENV=`).
+10. **12 primitivos shadcn sem uso + `lib/placeholder-images.ts` sem uso** (user-nav usa
+    `picsum.photos`).
+11. **Wizard `handleDateChange`** ancorado ao meio-dia, repetido 4× — fonte de bug de fuso horário.
+12. **Disco E: quase cheio** (~814 MB livres de ~8 GB). `npm install` falha por falta de espaço;
+    `node_modules` está incompleto (511 pacotes, sem `.package-lock.json` interno). **Qualquer
+    verificação (`typecheck`, `lint`, `dev`) está bloqueada até liberar espaço.**
+13. **Markups das páginas usam cores/shadows antigos hardcoded** (`border-slate-200`, `shadow-sm`,
+    `bg-primary`, `bg-emerald-500`, `bg-rose-500`, `shadow-lg`, `transition-all` ×12) — ficaram de
+    fora do escopo do redesenho v2 (que foi só tokens + primitivos). Vão precisar de passe para usar
+    `border-border`, `text-income`/`text-expense` e as novas sombras.
+14. **`src/app/icon.svg` e `public/logo.svg` ainda com o logo azul antigo** — só `layout.tsx` e
+    `components/icons.tsx` foram atualizados para o grafite.
+15. **Física do doc Apple não implementada** (§2-6): drag 1:1, momentum projection, velocity handoff,
+    rubber-banding. Exige a lib `motion`, não instalável por falta de disco. Só faz sentido se
+    algum gesto for introduzido no app.
+
+## Sessões
+
+> Entradas mais recentes primeiro. Formato:
+> `- **AAAA-MM-DD** — [tema] — arquivos tocados: `...` — decisões/pendências.`
+
+- **2026-10-15** — Redesenho visual v2 (Apple) via `.design_apple.md`. Arquivos tocados:
+  `src/app/globals.css` (reescrito), `tailwind.config.ts` (reescrito), `src/app/layout.tsx`
+  (fonts removidas, logo, themeColor), `src/components/icons.tsx` (logo), `src/components/ui/button.tsx`,
+  `card.tsx`, `dialog.tsx`, `sidebar.tsx`, `src/app/dashboard/layout.tsx` (header material, logo).
+  Escopo escolhido pelo usuário: **tokens + primitivos** — sem tocar no markup das páginas.
+  Detalhes completos em `## Design system — v2 Apple`. ⚠ **Sem validação** (disco cheio).
+
+- **2026-10-15** — Feature: leitura de comprovante Pix/débito por **OCR local**. Arquivos tocados:
+  `src/lib/receipt-parser.ts` (novo, heurísticas puras), `src/components/dashboard/receipt-upload-dialog.tsx`
+  (novo, dialog com OCR + aprovação), `src/app/dashboard/despesas/page.tsx` (botão "Comprovante"
+  + import `ScanLine` + import do dialog), `package.json` (+`tesseract.js@^7.0.0`),
+  `.env.example` (novo), `src/ai/flows/receipt-scanning.ts` (criado e **removido** — versão Gemini
+  abandonada), `next.config.js` (alterado e **revertido**, diff líquido zero).
+
+  Decisões do usuário: botão em `/dashboard/despesas`; extrair valor + descrição + data (categoria
+  também sai, via keyword map); lançar no mês da data do comprovante.
+  Por quê sem IA: o usuário está **sem API de IA e sem funds**. Python foi avaliado e descartado
+  (exige microserviço hospedado = custo). `tesseract.js` roda no browser, offline e sem custo.
+  A dedução do saldo vem de gravar `Expense` com `status:'pago'` — o saldo é derivado, não salvo.
+
+  ⚠ **CÓDIGO NÃO VALIDADO.** O usuário pediu para escrever sem verificação. `npm install` não
+  concluiu (disco cheio), portanto **`npm run typecheck` e `npm run lint` NUNCA foram rodados**
+  sobre este código. O contrato da API do `tesseract.js@7` (`createWorker(langs, oem, options)`,
+  `worker.recognize()` → `data.text`, `worker.terminate()`) foi escrito de memória e **precisa ser
+  conferido**. Tratar como pendente de validação em toda próxima sessão.
+
+- **2026-10-15** — Protocolo permanente de registro. Adicionada a seção `## PROTOCOLO` ao topo do
+  arquivo, tornando obrigatória a gravação de **toda** alteração neste `.LLM` (código, docs e plano).
+  Fecha-se com: leitura integral no início da sessão, registro no fim de cada bloco de trabalho,
+  e atualização das seções estáticas (`Identidade`, `Arquitetura`, `Convenções`, `Pendências`)
+  quando o fato correspondente mudar. Nenhuma alteração de código neste passo.
+
+- **2026-10-15** — Criação do `.LLM`. Levantamento completo do projeto (rotas, camada de dados,
+  regras Firestore, fluxo de IA, convenções). Documentadas as 11 pendências técnicas acima.
+  Nenhuma mudança de código.
+
+### Histórico anterior (via git log, 104 commits)
+
+Recorrência nos pedidos: correção de card/layout do dashboard (Consumo da Renda, Progresso do
+Mês, próximas 5 contas a vencer), recorrência de despesas (propagar para meses futuros, excluir
+só a ocorrência futura), notificações de vencimento, flags de categoria coloridas nas despesas,
+botão de download do APK, versão do app exibida no rodapé da sidebar, iconografia "Ca$hOrd".
+
+Destaques com tag de commit:
+- `1ddce60` — remoção do módulo de IA anterior
+- `473e20c` / `2c25b51` — semântica de recorrência: excluir apenas a ocorrência futura
+- `d51ee3a` — despesas com data de vencimento refletem nos demais meses
+- `db53c81` — exibição da versão do app nos créditos da sidebar
+- `ca2cd2c` / `245cc4a` — correções de `ReferenceError` em runtime
